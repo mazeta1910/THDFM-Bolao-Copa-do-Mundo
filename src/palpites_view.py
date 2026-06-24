@@ -150,6 +150,11 @@ def nome_arquivo_palpites(jogo_ids: list[int], extensao: str, *, provisorio: boo
     return f"{prefixo}_j{ids}.{extensao}"
 
 
+def nome_arquivo_rodada(jogo_ids: list[int], extensao: str = "png") -> str:
+    ids = "_".join(str(jogo_id) for jogo_id in jogo_ids)
+    return f"rodada_j{ids}.{extensao}"
+
+
 def _mapas_palpites_provisorio(
     blocos: list[PalpitesPorJogo],
 ) -> tuple[list[PalpitesPorJogo], list[dict[str, PalpiteLinha]]]:

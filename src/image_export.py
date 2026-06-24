@@ -147,6 +147,28 @@ def exportar_classificacao_png(
     mudancas_posicao: dict[str, int | None],
     jogos_novos: list[str] | None = None,
 ) -> None:
+    imagem = renderizar_classificacao_png(
+        classificacao,
+        jogos_realizados=jogos_realizados,
+        total_jogos=total_jogos,
+        variacoes=variacoes,
+        mudancas_posicao=mudancas_posicao,
+        jogos_novos=jogos_novos,
+    )
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    imagem.save(path, format="PNG")
+
+
+def renderizar_classificacao_png(
+    classificacao: list[ClassificacaoLinha],
+    *,
+    jogos_realizados: int,
+    total_jogos: int,
+    variacoes: dict[str, int | None],
+    mudancas_posicao: dict[str, int | None],
+    jogos_novos: list[str] | None = None,
+):
     from PIL import Image, ImageDraw
 
     fontes = _carregar_fontes()
@@ -258,9 +280,7 @@ def exportar_classificacao_png(
         )
         y += ALTURA_LINHA
 
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    imagem.save(path, format="PNG")
+    return imagem
 
 
 ALTURA_BLOCO_JOGO = 24
@@ -694,6 +714,13 @@ def _desenhar_linha_participante_provisorio(
 
 
 def exportar_palpites_provisorios_png(blocos, path: str | Path) -> None:
+    imagem = renderizar_palpites_provisorios_png(blocos)
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    imagem.save(path, format="PNG")
+
+
+def renderizar_palpites_provisorios_png(blocos):
     from PIL import Image, ImageDraw
 
     from src.bandeiras import titulo_jogo_bandeiras
@@ -819,6 +846,52 @@ def exportar_palpites_provisorios_png(blocos, path: str | Path) -> None:
         )
         y += ALTURA_LINHA
 
+    return imagem
+
+
+ESPACO_ENTRE_SECOES = 32
+
+
+def combinar_imagens_horizontal(imagens: list, *, espaco: int = ESPACO_ENTRE_SECOES):
+    from PIL import Image
+
+    if not imagens:
+        raise ValueError("Nenhuma imagem para combinar.")
+
+    largura = sum(imagem.width for imagem in imagens) + espaco * max(0, len(imagens) - 1)
+    altura = max(imagem.height for imagem in imagens)
+    canvas = Image.new("RGB", (largura, altura), PAL_FUNDO)
+    x = 0
+    for indice, imagem in enumerate(imagens):
+        y = (altura - imagem.height) // 2
+        canvas.paste(imagem, (x, y))
+        x += imagem.width
+        if indice < len(imagens) - 1:
+            x += espaco
+    return canvas
+
+
+def exportar_rodada_completa_png(
+    classificacao: list[ClassificacaoLinha],
+    blocos,
+    path: str | Path,
+    *,
+    jogos_realizados: int,
+    total_jogos: int,
+    variacoes: dict[str, int | None],
+    mudancas_posicao: dict[str, int | None],
+    jogos_novos: list[str] | None = None,
+) -> None:
+    imagem_classificacao = renderizar_classificacao_png(
+        classificacao,
+        jogos_realizados=jogos_realizados,
+        total_jogos=total_jogos,
+        variacoes=variacoes,
+        mudancas_posicao=mudancas_posicao,
+        jogos_novos=jogos_novos,
+    )
+    imagem_provisorio = renderizar_palpites_provisorios_png(blocos)
+    combinada = combinar_imagens_horizontal([imagem_classificacao, imagem_provisorio])
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    imagem.save(path, format="PNG")
+    combinada.save(path, format="PNG")

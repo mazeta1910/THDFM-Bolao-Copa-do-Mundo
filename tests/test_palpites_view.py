@@ -9,6 +9,7 @@ from src.palpites_view import (
     formatar_palpites_texto,
     listar_palpites_jogos,
     nome_arquivo_palpites,
+    nome_arquivo_rodada,
     participantes_ordenados_provisorio,
     rotulo_vencedor_jogo,
 )
@@ -69,6 +70,7 @@ class TestPalpitesView(unittest.TestCase):
             nome_arquivo_palpites([51], "png", provisorio=True),
             "palpites_provisorios_j51.png",
         )
+        self.assertEqual(nome_arquivo_rodada([51, 52]), "rodada_j51_52.png")
 
     def test_classificacao_provisorio(self):
         jogo = next(j for j in self.bolao.jogos if j.id == 1)

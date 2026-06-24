@@ -37,6 +37,7 @@ from src.palpites_view import (
     formatar_palpites_texto,
     listar_palpites_jogos,
     nome_arquivo_palpites,
+    nome_arquivo_rodada,
 )
 from src.thdfm_parser import parse_thdfm_csv
 
@@ -45,6 +46,7 @@ try:
         exportar_classificacao_png,
         exportar_palpites_png,
         exportar_palpites_provisorios_png,
+        exportar_rodada_completa_png,
     )
 
     _PNG_DISPONIVEL = True
@@ -406,6 +408,32 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
             )
             print(f"Imagem salva em {CLASSIFICACAO_PNG}")
 
+    if args.jogo and not args.sem_png:
+        if not _PNG_DISPONIVEL:
+            print(
+                "Imagem completa nao gerada: instale Pillow com 'pip install pillow'.",
+                file=sys.stderr,
+            )
+        else:
+            blocos = listar_palpites_jogos(bolao, args.jogo)
+            sem_placar = [bloco.jogo.id for bloco in blocos if not bloco.jogo.realizado]
+            if sem_placar:
+                ids = ", ".join(str(jogo_id) for jogo_id in sem_placar)
+                print(f"Jogos sem placar provisorio: {ids}", file=sys.stderr)
+                return 1
+            rodada_path = DATA_DIR / nome_arquivo_rodada(args.jogo)
+            exportar_rodada_completa_png(
+                classificacao,
+                blocos,
+                rodada_path,
+                jogos_realizados=realizados,
+                total_jogos=len(bolao.jogos),
+                variacoes=variacoes,
+                mudancas_posicao=mudancas_posicao,
+                jogos_novos=jogos_novos or None,
+            )
+            print(f"Imagem completa salva em {rodada_path}")
+
     if args.confirmar_rodada or args.zerar_variacao:
         salvar_snapshot(
             SNAPSHOT_JSON,
@@ -664,6 +692,13 @@ def main(argv: list[str] | None = None) -> int:
         "--zerar-variacao",
         action="store_true",
         help="Mostra Rodada zerada e confirma a classificacao atual como baseline",
+    )
+    p_compartilhar.add_argument(
+        "--jogo",
+        type=int,
+        nargs="+",
+        metavar="ID",
+        help="Inclui palpites provisorios na imagem completa (ex: --jogo 51 52)",
     )
     p_compartilhar.set_defaults(func=cmd_compartilhar)
 

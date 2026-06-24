@@ -26,11 +26,17 @@ def _ler_linha(mensagem: str) -> str | None:
         return None
 
 
-def _ler_jogos(mensagem: str = "IDs dos jogos (ex: 51 52): ") -> list[int] | None:
+def _ler_jogos(
+    mensagem: str = "IDs dos jogos (ex: 51 52): ",
+    *,
+    opcional: bool = False,
+) -> list[int] | None:
     texto = _ler_linha(mensagem)
     if texto is None:
         return None
     if not texto:
+        if opcional:
+            return []
         print("Nenhum jogo informado.")
         return None
     try:
@@ -122,7 +128,7 @@ def _imprimir_cabecalho() -> None:
     print("=" * 44)
     print()
     print("Dia a dia")
-    print("  1. Compartilhar classificacao (PNG + texto)")
+    print("  1. Compartilhar classificacao (+ provisorio opcional)")
     print("  2. Confirmar rodada (fim dos jogos oficiais)")
     print("  3. Lancar placar de um jogo")
     print("  4. Lancar placares (modo interativo)")
@@ -168,6 +174,14 @@ def executar_menu() -> int:
 
         try:
             if escolha == "1":
+                _imprimir_contexto_jogos(com_placar=True, limite_com_placar=4)
+                jogos = _ler_jogos(
+                    "Jogos provisorios na imagem completa (Enter = so classificacao): ",
+                    opcional=True,
+                )
+                if jogos is None:
+                    _pausar()
+                    continue
                 cmd_compartilhar(
                     _namespace(
                         sem_arquivo=False,
@@ -175,6 +189,7 @@ def executar_menu() -> int:
                         sem_snapshot=False,
                         confirmar_rodada=False,
                         zerar_variacao=False,
+                        jogo=jogos,
                     )
                 )
             elif escolha == "2":
