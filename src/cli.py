@@ -11,10 +11,12 @@ from src.loader import (
     atualizar_resultado,
     importar_resultados_da_planilha,
     limpar_todos_resultados,
+    remover_resultados,
     salvar_resultados,
     validar_bolao,
 )
 from src.ranking import (
+    calcular_variacoes_da_rodada,
     carregar_classificacao_referencia,
     comparar_classificacoes,
     exportar_classificacao,
@@ -31,6 +33,7 @@ from src.snapshot import (
     snapshot_de_classificacao,
 )
 from src.palpites_view import (
+    formatar_palpites_provisorio_texto,
     formatar_palpites_texto,
     listar_palpites_jogos,
     nome_arquivo_palpites,
@@ -38,7 +41,11 @@ from src.palpites_view import (
 from src.thdfm_parser import parse_thdfm_csv
 
 try:
-    from src.image_export import exportar_classificacao_png, exportar_palpites_png
+    from src.image_export import (
+        exportar_classificacao_png,
+        exportar_palpites_png,
+        exportar_palpites_provisorios_png,
+    )
 
     _PNG_DISPONIVEL = True
 except ImportError:
@@ -230,6 +237,17 @@ def _parse_placar(texto: str) -> tuple[int, int]:
 def cmd_resultado(args: argparse.Namespace) -> int:
     bolao = carregar_bolao()
 
+    if args.remover:
+        if not args.jogo:
+            print("Informe --jogo com um ou mais IDs para remover.")
+            return 1
+        removidos = remover_resultados(bolao, args.jogo)
+        for jogo in removidos:
+            print(f"Jogo {jogo.id} ({jogo.casa} x {jogo.fora}): resultado removido")
+        salvar_resultados(bolao, RESULTADOS_CSV)
+        print(f"Resultados salvos em {RESULTADOS_CSV}")
+        return 0
+
     if args.interativo:
         pendentes = [j for j in bolao.jogos if not j.realizado]
         if not pendentes:
@@ -258,8 +276,11 @@ def cmd_resultado(args: argparse.Namespace) -> int:
         if args.jogo is None or args.placar is None:
             print("Informe --jogo e --placar, ou use --interativo.")
             return 1
+        if len(args.jogo) != 1:
+            print("Informe apenas um jogo por vez ao registrar placar.")
+            return 1
         casa, fora = _parse_placar(args.placar)
-        jogo = atualizar_resultado(bolao, args.jogo, casa, fora)
+        jogo = atualizar_resultado(bolao, args.jogo[0], casa, fora)
         print(f"Jogo {jogo.id} ({jogo.casa} x {jogo.fora}): {casa}-{fora}")
 
     salvar_resultados(bolao, RESULTADOS_CSV)
@@ -292,6 +313,28 @@ def cmd_exportar(args: argparse.Namespace) -> int:
     return 0
 
 
+def _variacoes_zeradas(classificacao: list) -> dict[str, int]:
+    return {linha.participante.strip(): 0 for linha in classificacao}
+
+
+def _calcular_variacoes_compartilhar(
+    bolao,
+    classificacao: list,
+    *,
+    baseline: dict[str, dict] | None,
+    jogos_ids_baseline: set[int],
+    tem_snapshot: bool,
+    zerar_variacao: bool,
+) -> dict[str, int | None]:
+    if zerar_variacao:
+        return _variacoes_zeradas(classificacao)
+    if tem_snapshot:
+        return calcular_variacoes_da_rodada(bolao, jogos_ids_baseline)
+    if baseline is not None:
+        return calcular_variacoes(classificacao, baseline)
+    return {linha.participante.strip(): None for linha in classificacao}
+
+
 def cmd_compartilhar(args: argparse.Namespace) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -301,11 +344,26 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
     realizados = sum(1 for j in bolao.jogos if j.realizado)
     jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
 
-    baseline, jogos_ids_anteriores, tem_snapshot = _carregar_baseline_variacao()
-    variacoes = calcular_variacoes(classificacao, baseline)
-    mudancas_posicao = calcular_mudancas_posicao(classificacao, baseline)
+    if args.zerar_variacao:
+        baseline_participantes = snapshot_de_classificacao(classificacao)
+        jogos_ids_anteriores = set(jogos_ids)
+        tem_snapshot = True
+    else:
+        baseline_participantes, jogos_ids_anteriores, tem_snapshot = _carregar_baseline_variacao()
+
+    variacoes = _calcular_variacoes_compartilhar(
+        bolao,
+        classificacao,
+        baseline=baseline_participantes,
+        jogos_ids_baseline=jogos_ids_anteriores,
+        tem_snapshot=tem_snapshot,
+        zerar_variacao=args.zerar_variacao,
+    )
+    mudancas_posicao = calcular_mudancas_posicao(classificacao, baseline_participantes)
     jogos_novos = (
-        jogos_recem_realizados(bolao, jogos_ids_anteriores) if tem_snapshot else []
+        [] if args.zerar_variacao else jogos_recem_realizados(bolao, jogos_ids_anteriores)
+        if tem_snapshot
+        else []
     )
 
     texto = formatar_classificacao_compartilhar(
@@ -348,13 +406,15 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
             )
             print(f"Imagem salva em {CLASSIFICACAO_PNG}")
 
-    if not args.sem_snapshot:
+    if args.confirmar_rodada or args.zerar_variacao:
         salvar_snapshot(
             SNAPSHOT_JSON,
             classificacao,
             jogos_realizados=realizados,
             jogos_ids=jogos_ids,
         )
+        if args.confirmar_rodada:
+            print(f"Rodada confirmada. Baseline salva em {SNAPSHOT_JSON.name}.")
 
     return 0
 
@@ -382,11 +442,19 @@ def cmd_palpites(args: argparse.Namespace) -> int:
 
     bolao = carregar_bolao()
     blocos = listar_palpites_jogos(bolao, args.jogo)
-    texto = formatar_palpites_texto(blocos)
+
+    if args.provisorio:
+        realizados = [bloco for bloco in blocos if bloco.jogo.realizado]
+        if not realizados:
+            print("Nenhum dos jogos informados tem placar provisorio.", file=sys.stderr)
+            return 1
+        texto = formatar_palpites_provisorio_texto(blocos)
+    else:
+        texto = formatar_palpites_texto(blocos)
     print(texto)
 
     if not args.sem_arquivo:
-        txt_path = DATA_DIR / nome_arquivo_palpites(args.jogo, "txt")
+        txt_path = DATA_DIR / nome_arquivo_palpites(args.jogo, "txt", provisorio=args.provisorio)
         txt_path.write_text(texto + "\n", encoding="utf-8")
         print(f"\nTexto salvo em {txt_path}")
 
@@ -397,10 +465,26 @@ def cmd_palpites(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
         else:
-            png_path = DATA_DIR / nome_arquivo_palpites(args.jogo, "png")
-            exportar_palpites_png(blocos, png_path)
+            png_path = DATA_DIR / nome_arquivo_palpites(args.jogo, "png", provisorio=args.provisorio)
+            if args.provisorio:
+                exportar_palpites_provisorios_png(blocos, png_path)
+            else:
+                exportar_palpites_png(blocos, png_path)
             print(f"Imagem salva em {png_path}")
 
+    return 0
+
+
+def cmd_baseline(_args: argparse.Namespace) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    bolao = carregar_bolao()
+    _salvar_baseline(bolao, mensagem_snapshot=True)
+    print(
+        "Baseline pre-rodada salva. Use compartilhar durante os jogos; "
+        "ao final, compartilhar --confirmar-rodada."
+    )
     return 0
 
 
@@ -508,9 +592,26 @@ def cmd_bandeiras(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_menu(_args: argparse.Namespace) -> int:
+    from src.menu import executar_menu
+
+    return executar_menu()
+
+
 def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+
+    if not argv or argv == ["menu"]:
+        from src.menu import executar_menu
+
+        return executar_menu()
+
     parser = argparse.ArgumentParser(description="Bolão THDFM Copa do Mundo 2026")
     subparsers = parser.add_subparsers(dest="comando", required=True)
+
+    p_menu = subparsers.add_parser("menu", help="Menu interativo principal")
+    p_menu.set_defaults(func=cmd_menu)
 
     p_importar = subparsers.add_parser("importar", help="Importa e resume o CSV do bolão")
     p_importar.add_argument("--arquivo", default=str(BOLAO_CSV))
@@ -520,8 +621,13 @@ def main(argv: list[str] | None = None) -> int:
     p_validar.set_defaults(func=cmd_validar)
 
     p_resultado = subparsers.add_parser("resultado", help="Registra resultado de jogo(s)")
-    p_resultado.add_argument("--jogo", type=int)
+    p_resultado.add_argument("--jogo", type=int, nargs="+")
     p_resultado.add_argument("--placar", help="Formato: 2-1")
+    p_resultado.add_argument(
+        "--remover",
+        action="store_true",
+        help="Remove o placar dos jogos informados em --jogo",
+    )
     p_resultado.add_argument("--interativo", action="store_true")
     p_resultado.set_defaults(func=cmd_resultado)
 
@@ -547,9 +653,25 @@ def main(argv: list[str] | None = None) -> int:
     p_compartilhar.add_argument(
         "--sem-snapshot",
         action="store_true",
-        help="Nao atualiza o snapshot (variacao na proxima rodada)",
+        help="Obsoleto: o snapshot so atualiza com --confirmar-rodada",
+    )
+    p_compartilhar.add_argument(
+        "--confirmar-rodada",
+        action="store_true",
+        help="Marca fim da rodada e salva baseline fixa para a proxima variacao",
+    )
+    p_compartilhar.add_argument(
+        "--zerar-variacao",
+        action="store_true",
+        help="Mostra Rodada zerada e confirma a classificacao atual como baseline",
     )
     p_compartilhar.set_defaults(func=cmd_compartilhar)
+
+    p_baseline = subparsers.add_parser(
+        "baseline",
+        help="Salva classificacao atual como referencia da coluna Rodada",
+    )
+    p_baseline.set_defaults(func=cmd_baseline)
 
     p_proximos = subparsers.add_parser("proximos", help="Lista jogos sem resultado")
     p_proximos.add_argument(
@@ -570,6 +692,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_palpites.add_argument("--sem-arquivo", action="store_true")
     p_palpites.add_argument("--sem-png", action="store_true")
+    p_palpites.add_argument(
+        "--provisorio",
+        action="store_true",
+        help="Mostra quesito e vencedor com base no placar provisorio (requer resultado lancado)",
+    )
     p_palpites.set_defaults(func=cmd_palpites)
 
     p_conferir = subparsers.add_parser("conferir", help="Compara com classificação de referência")

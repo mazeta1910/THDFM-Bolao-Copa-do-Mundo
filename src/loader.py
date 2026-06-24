@@ -60,6 +60,19 @@ def atualizar_resultado(bolao: BolaoData, jogo_id: int, gols_casa: int, gols_for
     return jogo
 
 
+def remover_resultados(bolao: BolaoData, jogo_ids: list[int]) -> list[Jogo]:
+    removidos: list[Jogo] = []
+    jogos_por_id = {jogo.id: jogo for jogo in bolao.jogos}
+    for jogo_id in jogo_ids:
+        jogo = jogos_por_id.get(jogo_id)
+        if jogo is None:
+            raise ValueError(f"Jogo {jogo_id} não encontrado.")
+        jogo.gols_casa = None
+        jogo.gols_fora = None
+        removidos.append(jogo)
+    return removidos
+
+
 def importar_resultados_da_planilha(
     path: str | Path,
     destino: str | Path,

@@ -37,6 +37,14 @@ python scripts/download_bandeiras.py
 ## Comandos
 
 ```bash
+# Menu interativo (recomendado)
+python -m src.cli
+python -m src.cli menu
+```
+
+### Linha de comando
+
+```bash
 # Resumo da importação
 python -m src.cli importar --arquivo data/bolao.csv
 
@@ -59,6 +67,9 @@ python -m src.cli conferir
 # Registrar resultado de um jogo
 python -m src.cli resultado --jogo 72 --placar 1-1
 
+# Remover placar de um ou mais jogos (volta ao estado anterior)
+python -m src.cli resultado --remover --jogo 51 52
+
 # Modo interativo para jogos pendentes (Enter pula, 'sair' ou Ctrl+C encerra)
 python -m src.cli resultado --interativo
 
@@ -68,6 +79,15 @@ python -m src.cli classificar
 # Tabela em texto e imagem PNG para colar no WhatsApp
 python -m src.cli compartilhar
 
+# Ao final da rodada (placares oficiais), confirma a baseline fixa
+python -m src.cli compartilhar --confirmar-rodada
+
+# Durante os jogos pode compartilhar com placar provisorio: Rodada conta so jogos novos
+# Corrigir placar nao gera variacao negativa. Baseline so muda com --confirmar-rodada
+
+# Definir baseline manualmente (ex.: inicio do dia de jogos)
+python -m src.cli baseline
+
 # Instalar suporte a PNG (uma vez)
 pip install pillow
 
@@ -76,6 +96,9 @@ python -m src.cli proximos --limite 6
 
 # Palpites de jogos específicos (texto + PNG)
 python -m src.cli palpites --jogo 51 52
+
+# Palpites com status provisório (quesito + vencedor, estilo planilha)
+python -m src.cli palpites --jogo 51 --provisorio
 
 # Baixar bandeiras reais para os PNGs de palpites (cache em data/flags/)
 python -m src.cli bandeiras
@@ -96,6 +119,7 @@ python -m unittest discover -s tests -v
 ## Fluxo típico
 
 1. Exporte a planilha do Excel como CSV e salve em `data/bolao.csv`
-2. Rode `python -m src.cli validar`
-3. Após cada rodada de jogos, use `resultado --interativo`
-4. Rode `classificar` ou `exportar` para obter a tabela atualizada
+2. Rode `python -m src.cli` e use o menu (ou `validar` na linha de comando)
+3. Antes de uma rodada de jogos: opção **10** no menu (baseline)
+4. Durante os jogos: opções **3/4** (placar) e **1** (compartilhar)
+5. Ao final: opção **2** (confirmar rodada)

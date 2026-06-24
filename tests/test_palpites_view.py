@@ -2,7 +2,13 @@ import unittest
 from pathlib import Path
 
 from src.loader import aplicar_resultados_externos
-from src.palpites_view import formatar_palpites_texto, listar_palpites_jogos, nome_arquivo_palpites
+from src.palpites_view import (
+    formatar_palpites_provisorio_texto,
+    formatar_palpites_texto,
+    listar_palpites_jogos,
+    nome_arquivo_palpites,
+    rotulo_vencedor_jogo,
+)
 from src.thdfm_parser import parse_thdfm_csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -56,6 +62,42 @@ class TestPalpitesView(unittest.TestCase):
 
     def test_nome_arquivo(self):
         self.assertEqual(nome_arquivo_palpites([51, 52], "png"), "palpites_j51_52.png")
+        self.assertEqual(
+            nome_arquivo_palpites([51], "png", provisorio=True),
+            "palpites_provisorios_j51.png",
+        )
+
+    def test_classificacao_provisorio(self):
+        jogo = next(j for j in self.bolao.jogos if j.id == 1)
+        jogo.gols_casa = 0
+        jogo.gols_fora = 0
+        blocos = listar_palpites_jogos(self.bolao, [1])
+        linhas = blocos[0].linhas
+
+        self.assertEqual(rotulo_vencedor_jogo(jogo), "Empate")
+        for linha in linhas:
+            if linha.palpite_casa == 0 and linha.palpite_fora == 0:
+                self.assertEqual(linha.categoria, "Placar")
+                self.assertTrue(linha.acertou_vencedor)
+            elif linha.palpite_fora == 0:
+                self.assertEqual(linha.categoria, "Gols fora")
+            elif linha.palpite_casa == linha.palpite_fora:
+                self.assertEqual(linha.categoria, "Nada")
+                self.assertTrue(linha.acertou_vencedor)
+            else:
+                self.assertEqual(linha.categoria, "Nada")
+                self.assertFalse(linha.acertou_vencedor)
+
+    def test_formatar_provisorio(self):
+        jogo = next(j for j in self.bolao.jogos if j.id == 1)
+        jogo.gols_casa = 1
+        jogo.gols_fora = 0
+        blocos = listar_palpites_jogos(self.bolao, [1])
+        texto = formatar_palpites_provisorio_texto(blocos)
+        self.assertIn("PALPITES PROVISORIOS", texto)
+        self.assertIn("Quesito", texto)
+        self.assertIn("Venc", texto)
+        self.assertIn("PLACAR:", texto)
 
     def test_jogo_inexistente(self):
         with self.assertRaises(ValueError):

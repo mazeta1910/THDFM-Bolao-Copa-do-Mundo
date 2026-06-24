@@ -4,7 +4,7 @@ import csv
 from pathlib import Path
 
 from src.models import BolaoData, ClassificacaoLinha, PontosParticipante
-from src.scoring import pontos_detalhados
+from src.scoring import pontos_detalhados, pontos_jogo
 from src.snapshot import formatar_posicao_com_mudanca, formatar_variacao
 
 
@@ -25,6 +25,34 @@ def calcular_pontos(bolao: BolaoData) -> dict[str, PontosParticipante]:
         totais[palpite.participante].adicionar(pontos)
 
     return totais
+
+
+def calcular_variacoes_da_rodada(
+    bolao: BolaoData,
+    jogos_ids_baseline: set[int],
+) -> dict[str, int]:
+    """Pontos ganhos apenas nos jogos realizados apos a ultima rodada confirmada."""
+    jogos_da_rodada = {
+        jogo.id for jogo in bolao.jogos if jogo.realizado and jogo.id not in jogos_ids_baseline
+    }
+    variacoes = {nome: 0 for nome in bolao.participantes}
+    if not jogos_da_rodada:
+        return variacoes
+
+    jogos_por_id = {jogo.id: jogo for jogo in bolao.jogos}
+    for palpite in bolao.palpites:
+        if palpite.jogo_id not in jogos_da_rodada:
+            continue
+        jogo = jogos_por_id[palpite.jogo_id]
+        if not jogo.realizado:
+            continue
+        variacoes[palpite.participante] += pontos_jogo(
+            palpite.palpite_casa,
+            palpite.palpite_fora,
+            jogo.gols_casa,
+            jogo.gols_fora,
+        )
+    return variacoes
 
 
 def _sort_key(item: PontosParticipante) -> tuple[int, int, int, int, int, str]:
@@ -121,7 +149,7 @@ def formatar_classificacao_compartilhar(
     linhas.extend(
         [
             "",
-            "Rod = pontos ganhos na ultima atualizacao",
+            "Rod = pontos nos jogos novos desde a ultima rodada confirmada",
             "Placar 3 | Vencedor 2 | Gols casa/fora 1",
             "Desempate: placar -> vencedor -> gols casa -> gols fora",
         ]
