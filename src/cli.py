@@ -1,0 +1,651 @@
+from __future__ import annotations
+
+import argparse
+import re
+import shutil
+import sys
+from pathlib import Path
+
+from src.loader import (
+    aplicar_resultados_externos,
+    atualizar_resultado,
+    importar_resultados_da_planilha,
+    limpar_todos_resultados,
+    salvar_resultados,
+    validar_bolao,
+)
+from src.ranking import (
+    carregar_classificacao_referencia,
+    comparar_classificacoes,
+    exportar_classificacao,
+    exportar_classificacao_texto,
+    formatar_classificacao_compartilhar,
+    gerar_classificacao,
+    jogos_recem_realizados,
+)
+from src.snapshot import (
+    calcular_mudancas_posicao,
+    calcular_variacoes,
+    carregar_snapshot,
+    salvar_snapshot,
+    snapshot_de_classificacao,
+)
+from src.palpites_view import (
+    formatar_palpites_texto,
+    listar_palpites_jogos,
+    nome_arquivo_palpites,
+)
+from src.thdfm_parser import parse_thdfm_csv
+
+try:
+    from src.image_export import exportar_classificacao_png, exportar_palpites_png
+
+    _PNG_DISPONIVEL = True
+except ImportError:
+    _PNG_DISPONIVEL = False
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+DOWNLOADS = Path.home() / "Downloads"
+BOLAO_CSV = DATA_DIR / "bolao.csv"
+RESULTADOS_CSV = DATA_DIR / "resultados.csv"
+CLASSIFICACAO_CSV = DATA_DIR / "classificacao.csv"
+CLASSIFICACAO_TXT = DATA_DIR / "classificacao_grupo.txt"
+CLASSIFICACAO_PNG = DATA_DIR / "classificacao_grupo.png"
+SNAPSHOT_JSON = DATA_DIR / "classificacao_snapshot.json"
+REFERENCIA_CSV = DATA_DIR / "classificacao_referencia.csv"
+
+_ARQUIVOS_IGNORADOS = {
+    "resultados.csv",
+    "classificacao.csv",
+    "classificacao_referencia.csv",
+    "classificacao_grupo.txt",
+    "classificacao_snapshot.json",
+}
+
+
+def _resolve_arquivo(path: Path, fallback_name: str) -> Path:
+    if path.exists():
+        return path
+    fallback = DOWNLOADS / fallback_name
+    return fallback if fallback.exists() else path
+
+
+def _resolver_bolao_csv() -> Path:
+    if BOLAO_CSV.exists():
+        return BOLAO_CSV
+
+    candidatos = [
+        path
+        for path in sorted(DATA_DIR.glob("*.csv"), key=lambda item: item.stat().st_mtime, reverse=True)
+        if path.name.lower() not in _ARQUIVOS_IGNORADOS
+        and "fase de grupos" in path.name.lower()
+    ]
+    if candidatos:
+        return candidatos[0]
+
+    return _resolve_arquivo(BOLAO_CSV, "BOLÃO THDFM WC26 - Fase de grupos.csv")
+
+
+def carregar_bolao(arquivo: Path | None = None):
+    path = arquivo or _resolver_bolao_csv()
+    if not path.exists():
+        raise FileNotFoundError(f"Arquivo do bolão não encontrado: {path}")
+
+    bolao = parse_thdfm_csv(path)
+    aplicar_resultados_externos(bolao, RESULTADOS_CSV)
+    return bolao
+
+
+def _carregar_baseline_variacao() -> tuple[dict[str, dict] | None, set[int], bool]:
+    snapshot = carregar_snapshot(SNAPSHOT_JSON)
+    if snapshot is not None:
+        return (
+            snapshot.get("participantes"),
+            set(snapshot.get("jogos_ids", [])),
+            True,
+        )
+
+    referencia_path = _resolve_arquivo(
+        REFERENCIA_CSV, "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv"
+    )
+    if referencia_path.exists():
+        referencia = carregar_classificacao_referencia(referencia_path)
+        return snapshot_de_classificacao(referencia), set(), False
+
+    return None, set(), False
+
+
+def _salvar_baseline(bolao, *, mensagem_snapshot: bool = True) -> None:
+    classificacao = gerar_classificacao(bolao)
+    realizados = sum(1 for j in bolao.jogos if j.realizado)
+    jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
+    salvar_snapshot(
+        SNAPSHOT_JSON,
+        classificacao,
+        jogos_realizados=realizados,
+        jogos_ids=jogos_ids,
+    )
+    if mensagem_snapshot:
+        print(f"Baseline salva em {SNAPSHOT_JSON.name}.")
+
+    if _PNG_DISPONIVEL:
+        variacoes = calcular_variacoes(classificacao, None)
+        mudancas = calcular_mudancas_posicao(classificacao, None)
+        exportar_classificacao_png(
+            classificacao,
+            CLASSIFICACAO_PNG,
+            jogos_realizados=realizados,
+            total_jogos=len(bolao.jogos),
+            variacoes=variacoes,
+            mudancas_posicao=mudancas,
+        )
+        print(f"Classificação em {CLASSIFICACAO_PNG.name}")
+
+
+def cmd_importar(args: argparse.Namespace) -> int:
+    path = Path(args.arquivo)
+    bolao = parse_thdfm_csv(path)
+    realizados = sum(1 for j in bolao.jogos if j.realizado)
+    print(f"Jogos: {len(bolao.jogos)}")
+    print(f"Participantes: {len(bolao.participantes)}")
+    print(f"Palpites: {len(bolao.palpites)}")
+    print(f"Resultados preenchidos: {realizados}")
+    return 0
+
+
+def cmd_importar_resultados(args: argparse.Namespace) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    origem = Path(args.arquivo) if args.arquivo else BOLAO_CSV
+    if not origem.exists():
+        print(f"Arquivo não encontrado: {origem}", file=sys.stderr)
+        return 1
+
+    realizados, total = importar_resultados_da_planilha(origem, RESULTADOS_CSV)
+    print(f"Importados {realizados} de {total} resultados a partir de {origem.name}")
+    print(f"Salvo em {RESULTADOS_CSV.name}")
+
+    bolao = carregar_bolao()
+    erros = validar_bolao(bolao)
+    if erros:
+        print("Avisos na planilha:")
+        for erro in erros:
+            print(f"  - {erro}")
+        return 1
+
+    if not args.sem_baseline:
+        _salvar_baseline(bolao)
+
+    if args.conferir and REFERENCIA_CSV.exists():
+        return cmd_conferir(argparse.Namespace())
+
+    return 0
+
+
+def cmd_importar_referencia(args: argparse.Namespace) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    origem = Path(args.arquivo)
+    if not origem.exists():
+        origem = _resolve_arquivo(origem, args.arquivo)
+    if not origem.exists():
+        print(f"Arquivo não encontrado: {args.arquivo}", file=sys.stderr)
+        return 1
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(origem, REFERENCIA_CSV)
+    referencia = carregar_classificacao_referencia(REFERENCIA_CSV)
+    print(f"Referência importada: {len(referencia)} participantes em {REFERENCIA_CSV.name}")
+    print("Rode 'python -m src.cli conferir' para validar a pontuação.")
+    return 0
+
+
+def cmd_validar(args: argparse.Namespace) -> int:
+    bolao = carregar_bolao()
+    erros = validar_bolao(bolao)
+    if erros:
+        print("Erros encontrados:")
+        for erro in erros:
+            print(f"  - {erro}")
+        return 1
+
+    realizados = sum(1 for j in bolao.jogos if j.realizado)
+    print("Bolão válido.")
+    print(f"  Jogos: {len(bolao.jogos)}")
+    print(f"  Participantes: {len(bolao.participantes)}")
+    print(f"  Resultados: {realizados}/{len(bolao.jogos)}")
+    return 0
+
+
+def _parse_placar(texto: str) -> tuple[int, int]:
+    match = re.match(r"^\s*(\d+)\s*[-xX]\s*(\d+)\s*$", texto)
+    if not match:
+        raise ValueError(f"Placar inválido: {texto!r}. Use o formato 2-1.")
+    return int(match.group(1)), int(match.group(2))
+
+
+def cmd_resultado(args: argparse.Namespace) -> int:
+    bolao = carregar_bolao()
+
+    if args.interativo:
+        pendentes = [j for j in bolao.jogos if not j.realizado]
+        if not pendentes:
+            print("Todos os jogos já têm resultado.")
+            return 0
+
+        print("Digite o placar, Enter para pular ou 'sair' para encerrar.\n")
+        try:
+            for jogo in pendentes:
+                print(f"Jogo {jogo.id}: {jogo.casa} x {jogo.fora} ({jogo.data})")
+                texto = input("Placar (ex: 2-1): ").strip()
+                if not texto:
+                    continue
+                if texto.lower() in {"sair", "s", "q", "quit"}:
+                    print("Encerrando. Resultados ja registrados serao salvos.")
+                    break
+                try:
+                    casa, fora = _parse_placar(texto)
+                    atualizar_resultado(bolao, jogo.id, casa, fora)
+                    print(f"  Registrado: {casa}-{fora}")
+                except ValueError as exc:
+                    print(f"  Erro: {exc}")
+        except KeyboardInterrupt:
+            print("\nInterrompido. Resultados ja registrados serao salvos.")
+    else:
+        if args.jogo is None or args.placar is None:
+            print("Informe --jogo e --placar, ou use --interativo.")
+            return 1
+        casa, fora = _parse_placar(args.placar)
+        jogo = atualizar_resultado(bolao, args.jogo, casa, fora)
+        print(f"Jogo {jogo.id} ({jogo.casa} x {jogo.fora}): {casa}-{fora}")
+
+    salvar_resultados(bolao, RESULTADOS_CSV)
+    print(f"Resultados salvos em {RESULTADOS_CSV}")
+    return 0
+
+
+def _imprimir_classificacao(classificacao: list) -> None:
+    print(f"{'Pos':>3}  {'Participante':<28} {'Placar':>6} {'Vencedor':>8} {'Gols casa':>9} {'Gols fora':>9} {'Soma':>5}")
+    print("-" * 78)
+    for linha in classificacao:
+        print(
+            f"{linha.posicao:>3}  {linha.participante:<28} "
+            f"{linha.placar:>6} {linha.vencedor:>8} {linha.gols_casa:>9} {linha.gols_fora:>9} {linha.soma:>5}"
+        )
+
+
+def cmd_classificar(args: argparse.Namespace) -> int:
+    bolao = carregar_bolao()
+    classificacao = gerar_classificacao(bolao)
+    _imprimir_classificacao(classificacao)
+    return 0
+
+
+def cmd_exportar(args: argparse.Namespace) -> int:
+    bolao = carregar_bolao()
+    classificacao = gerar_classificacao(bolao)
+    exportar_classificacao(classificacao, CLASSIFICACAO_CSV)
+    print(f"Classificação exportada para {CLASSIFICACAO_CSV}")
+    return 0
+
+
+def cmd_compartilhar(args: argparse.Namespace) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    bolao = carregar_bolao()
+    classificacao = gerar_classificacao(bolao)
+    realizados = sum(1 for j in bolao.jogos if j.realizado)
+    jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
+
+    baseline, jogos_ids_anteriores, tem_snapshot = _carregar_baseline_variacao()
+    variacoes = calcular_variacoes(classificacao, baseline)
+    mudancas_posicao = calcular_mudancas_posicao(classificacao, baseline)
+    jogos_novos = (
+        jogos_recem_realizados(bolao, jogos_ids_anteriores) if tem_snapshot else []
+    )
+
+    texto = formatar_classificacao_compartilhar(
+        classificacao,
+        jogos_realizados=realizados,
+        total_jogos=len(bolao.jogos),
+        variacoes=variacoes,
+        mudancas_posicao=mudancas_posicao,
+        jogos_novos=jogos_novos or None,
+    )
+    print(texto)
+
+    if not args.sem_arquivo:
+        exportar_classificacao_texto(
+            classificacao,
+            CLASSIFICACAO_TXT,
+            jogos_realizados=realizados,
+            total_jogos=len(bolao.jogos),
+            variacoes=variacoes,
+            mudancas_posicao=mudancas_posicao,
+            jogos_novos=jogos_novos or None,
+        )
+        print(f"\nTexto salvo em {CLASSIFICACAO_TXT}")
+
+    if not args.sem_png:
+        if not _PNG_DISPONIVEL:
+            print(
+                "PNG nao gerado: instale Pillow com 'pip install pillow' e rode de novo.",
+                file=sys.stderr,
+            )
+        else:
+            exportar_classificacao_png(
+                classificacao,
+                CLASSIFICACAO_PNG,
+                jogos_realizados=realizados,
+                total_jogos=len(bolao.jogos),
+                variacoes=variacoes,
+                mudancas_posicao=mudancas_posicao,
+                jogos_novos=jogos_novos or None,
+            )
+            print(f"Imagem salva em {CLASSIFICACAO_PNG}")
+
+    if not args.sem_snapshot:
+        salvar_snapshot(
+            SNAPSHOT_JSON,
+            classificacao,
+            jogos_realizados=realizados,
+            jogos_ids=jogos_ids,
+        )
+
+    return 0
+
+
+def cmd_proximos(args: argparse.Namespace) -> int:
+    bolao = carregar_bolao()
+    pendentes = [j for j in bolao.jogos if not j.realizado]
+    if not pendentes:
+        print("Todos os jogos já têm resultado.")
+        return 0
+
+    limite = args.limite or len(pendentes)
+    print(f"Próximos jogos sem resultado ({len(pendentes)} no total):\n")
+    for jogo in pendentes[:limite]:
+        print(f"  Jogo {jogo.id:>2}: {jogo.casa} x {jogo.fora}  ({jogo.data})")
+    print("\nPara registrar:")
+    print("  python -m src.cli resultado --jogo ID --placar 2-1")
+    print("  python -m src.cli resultado --interativo")
+    return 0
+
+
+def cmd_palpites(args: argparse.Namespace) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    bolao = carregar_bolao()
+    blocos = listar_palpites_jogos(bolao, args.jogo)
+    texto = formatar_palpites_texto(blocos)
+    print(texto)
+
+    if not args.sem_arquivo:
+        txt_path = DATA_DIR / nome_arquivo_palpites(args.jogo, "txt")
+        txt_path.write_text(texto + "\n", encoding="utf-8")
+        print(f"\nTexto salvo em {txt_path}")
+
+    if not args.sem_png:
+        if not _PNG_DISPONIVEL:
+            print(
+                "PNG nao gerado: instale Pillow com 'pip install pillow' e rode de novo.",
+                file=sys.stderr,
+            )
+        else:
+            png_path = DATA_DIR / nome_arquivo_palpites(args.jogo, "png")
+            exportar_palpites_png(blocos, png_path)
+            print(f"Imagem salva em {png_path}")
+
+    return 0
+
+
+def cmd_conferir(_args: argparse.Namespace) -> int:
+    referencia_path = _resolve_arquivo(
+        REFERENCIA_CSV, "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv"
+    )
+    if not referencia_path.exists():
+        print(f"Arquivo de referência não encontrado: {referencia_path}")
+        return 1
+
+    bolao = carregar_bolao()
+    calculada = gerar_classificacao(bolao)
+    referencia = carregar_classificacao_referencia(referencia_path)
+    diferencas = comparar_classificacoes(calculada, referencia)
+
+    if not diferencas:
+        print("Classificação confere com a referência.")
+        return 0
+
+    print("Diferenças encontradas:")
+    for diff in diferencas:
+        print(f"  - {diff}")
+    return 1
+
+
+def _arquivos_reset() -> list[Path]:
+    return [
+        SNAPSHOT_JSON,
+        REFERENCIA_CSV,
+        CLASSIFICACAO_TXT,
+        CLASSIFICACAO_PNG,
+        CLASSIFICACAO_CSV,
+    ]
+
+
+def cmd_reset(args: argparse.Namespace) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    origem = Path(args.arquivo) if args.arquivo else _resolver_bolao_csv()
+    if not origem.exists():
+        print(f"Arquivo do bolão não encontrado: {origem}", file=sys.stderr)
+        return 1
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(origem, BOLAO_CSV)
+    print(f"Planilha ativa: {BOLAO_CSV.name} (copiada de {origem.name})")
+
+    for path in _arquivos_reset():
+        if path.exists():
+            path.unlink()
+            print(f"Removido: {path.name}")
+
+    bolao = parse_thdfm_csv(BOLAO_CSV)
+    if args.com_resultados:
+        realizados_planilha, _ = importar_resultados_da_planilha(BOLAO_CSV, RESULTADOS_CSV)
+        print(
+            f"Resultados importados da planilha: {realizados_planilha} jogos em {RESULTADOS_CSV.name}"
+        )
+    else:
+        limpar_todos_resultados(bolao)
+        salvar_resultados(bolao, RESULTADOS_CSV)
+        print(f"Resultados zerados em {RESULTADOS_CSV.name}")
+
+    bolao = carregar_bolao()
+    erros = validar_bolao(bolao)
+    if erros:
+        print("Erros na planilha:")
+        for erro in erros:
+            print(f"  - {erro}")
+        return 1
+
+    realizados = sum(1 for j in bolao.jogos if j.realizado)
+    pendentes = [j for j in bolao.jogos if not j.realizado]
+    print(f"\nBolão pronto: {len(bolao.jogos)} jogos, {len(bolao.participantes)} participantes.")
+    print(f"Resultados registrados: {realizados}/{len(bolao.jogos)}")
+    if pendentes:
+        proximos = pendentes[:6]
+        print("\nPróximos jogos:")
+        for jogo in proximos:
+            print(f"  Jogo {jogo.id}: {jogo.casa} x {jogo.fora} ({jogo.data})")
+        if len(pendentes) > len(proximos):
+            print(f"  ... e mais {len(pendentes) - len(proximos)} jogos")
+
+    if not args.sem_baseline:
+        _salvar_baseline(bolao, mensagem_snapshot=True)
+        print("Variação na coluna Rodada começa no próximo compartilhar.")
+
+    print("\nUse 'python -m src.cli resultado --interativo' após cada rodada.")
+    return 0
+
+
+def cmd_bandeiras(args: argparse.Namespace) -> int:
+    from src.flag_cache import FLAG_DIR, baixar_todas_bandeiras
+
+    print(f"Baixando bandeiras para {FLAG_DIR} ...")
+    sucesso, total_falhas, falhas = baixar_todas_bandeiras(forcar=args.forcar)
+    print(f"Concluido: {sucesso} bandeira(s) em cache.")
+    if falhas:
+        print(f"Falhas ({total_falhas}):")
+        for item in falhas:
+            print(f"  - {item}")
+        return 1
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Bolão THDFM Copa do Mundo 2026")
+    subparsers = parser.add_subparsers(dest="comando", required=True)
+
+    p_importar = subparsers.add_parser("importar", help="Importa e resume o CSV do bolão")
+    p_importar.add_argument("--arquivo", default=str(BOLAO_CSV))
+    p_importar.set_defaults(func=cmd_importar)
+
+    p_validar = subparsers.add_parser("validar", help="Valida integridade dos dados")
+    p_validar.set_defaults(func=cmd_validar)
+
+    p_resultado = subparsers.add_parser("resultado", help="Registra resultado de jogo(s)")
+    p_resultado.add_argument("--jogo", type=int)
+    p_resultado.add_argument("--placar", help="Formato: 2-1")
+    p_resultado.add_argument("--interativo", action="store_true")
+    p_resultado.set_defaults(func=cmd_resultado)
+
+    p_classificar = subparsers.add_parser("classificar", help="Exibe classificação")
+    p_classificar.set_defaults(func=cmd_classificar)
+
+    p_exportar = subparsers.add_parser("exportar", help="Exporta classificação para CSV")
+    p_exportar.set_defaults(func=cmd_exportar)
+
+    p_compartilhar = subparsers.add_parser(
+        "compartilhar", help="Gera tabela em texto para enviar no grupo"
+    )
+    p_compartilhar.add_argument(
+        "--sem-arquivo",
+        action="store_true",
+        help="Nao salva classificacao_grupo.txt",
+    )
+    p_compartilhar.add_argument(
+        "--sem-png",
+        action="store_true",
+        help="Nao gera classificacao_grupo.png",
+    )
+    p_compartilhar.add_argument(
+        "--sem-snapshot",
+        action="store_true",
+        help="Nao atualiza o snapshot (variacao na proxima rodada)",
+    )
+    p_compartilhar.set_defaults(func=cmd_compartilhar)
+
+    p_proximos = subparsers.add_parser("proximos", help="Lista jogos sem resultado")
+    p_proximos.add_argument(
+        "--limite",
+        type=int,
+        help="Quantos jogos mostrar (padrão: todos os pendentes)",
+    )
+    p_proximos.set_defaults(func=cmd_proximos)
+
+    p_palpites = subparsers.add_parser("palpites", help="Lista palpites de um ou mais jogos")
+    p_palpites.add_argument(
+        "--jogo",
+        type=int,
+        nargs="+",
+        required=True,
+        metavar="ID",
+        help="ID(s) do(s) jogo(s), ex: --jogo 51 52",
+    )
+    p_palpites.add_argument("--sem-arquivo", action="store_true")
+    p_palpites.add_argument("--sem-png", action="store_true")
+    p_palpites.set_defaults(func=cmd_palpites)
+
+    p_conferir = subparsers.add_parser("conferir", help="Compara com classificação de referência")
+    p_conferir.set_defaults(func=cmd_conferir)
+
+    p_reset = subparsers.add_parser(
+        "reset",
+        help="Reinicia o bolão com uma planilha nova (zera resultados e snapshot)",
+    )
+    p_reset.add_argument(
+        "--arquivo",
+        help="CSV da fase de grupos (padrão: mais recente em data/)",
+    )
+    p_reset.add_argument(
+        "--com-resultados",
+        action="store_true",
+        help="Importa placares das linhas PLACAR da planilha para resultados.csv",
+    )
+    p_reset.add_argument(
+        "--sem-baseline",
+        action="store_true",
+        help="Nao gera snapshot nem PNG inicial",
+    )
+    p_reset.set_defaults(func=cmd_reset)
+
+    p_importar_resultados = subparsers.add_parser(
+        "importar-resultados",
+        help="Importa placares das linhas PLACAR do CSV da planilha",
+    )
+    p_importar_resultados.add_argument(
+        "--arquivo",
+        help="CSV da fase de grupos (padrao: data/bolao.csv)",
+    )
+    p_importar_resultados.add_argument(
+        "--sem-baseline",
+        action="store_true",
+        help="Nao atualiza snapshot nem PNG",
+    )
+    p_importar_resultados.add_argument(
+        "--conferir",
+        action="store_true",
+        help="Compara com classificacao_referencia.csv apos importar",
+    )
+    p_importar_resultados.set_defaults(func=cmd_importar_resultados)
+
+    p_importar_referencia = subparsers.add_parser(
+        "importar-referencia",
+        help="Importa CSV da classificacao provisoria exportada do Excel",
+    )
+    p_importar_referencia.add_argument(
+        "--arquivo",
+        required=True,
+        help="CSV da aba CLASSIFICACAO PROVISORIA",
+    )
+    p_importar_referencia.set_defaults(func=cmd_importar_referencia)
+
+    p_bandeiras = subparsers.add_parser(
+        "bandeiras", help="Baixa imagens reais das bandeiras para cache local"
+    )
+    p_bandeiras.add_argument(
+        "--forcar",
+        action="store_true",
+        help="Baixa de novo mesmo se ja existir em data/flags/",
+    )
+    p_bandeiras.set_defaults(func=cmd_bandeiras)
+
+    args = parser.parse_args(argv)
+    try:
+        return args.func(args)
+    except FileNotFoundError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

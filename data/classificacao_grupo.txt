@@ -1,0 +1,34 @@
+CLASSIFICADURA BOLAO - COPA DO MUNDO 2026
+Atualizada apos 0 de 72 jogos
+
+   Pos  Participante              Pts   Rod
+---------------------------------------------
+     1  Alisson Ottoni              0     0
+     2  André Galinha               0     0
+     3  Arthur SK                   0     0
+     4  Ayrton                      0     0
+     5  Benevides                   0     0
+     6  Diego Campos                0     0
+     7  Emboava                     0     0
+     8  Gabs                        0     0
+     9  Gui                         0     0
+    10  Haron Bonamigo              0     0
+    11  Hotel Plus Antonio Menezes    0     0
+    12  Jose Carlos                 0     0
+    13  Juan                        0     0
+    14  JV JEC                      0     0
+    15  Lucas Copini                0     0
+    16  Marlon Wietzikoski          0     0
+    17  Matheus Honorato            0     0
+    18  Mazeta                      0     0
+    19  Meta AI                     0     0
+    20  Pylegend                    0     0
+    21  Ramos                       0     0
+    22  Rodri                       0     0
+    23  Rodrigo (DDD 95)            0     0
+    24  Til ponto                   0     0
+    25  Xonha                       0     0
+
+Rod = pontos ganhos na ultima atualizacao
+Placar 3 | Vencedor 2 | Gols casa/fora 1
+Desempate: placar -> vencedor -> gols casa -> gols fora

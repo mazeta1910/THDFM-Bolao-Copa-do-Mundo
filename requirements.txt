@@ -1,0 +1,3 @@
+# Opcional — necessario apenas para gerar a imagem PNG (compartilhar)
+pillow>=10.0.0
+certifi>=2024.0.0
