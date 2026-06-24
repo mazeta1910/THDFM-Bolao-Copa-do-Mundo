@@ -3,10 +3,13 @@ from pathlib import Path
 
 from src.loader import aplicar_resultados_externos
 from src.palpites_view import (
+    _mapas_palpites_provisorio,
+    _total_pontos_provisorio,
     formatar_palpites_provisorio_texto,
     formatar_palpites_texto,
     listar_palpites_jogos,
     nome_arquivo_palpites,
+    participantes_ordenados_provisorio,
     rotulo_vencedor_jogo,
 )
 from src.thdfm_parser import parse_thdfm_csv
@@ -97,7 +100,11 @@ class TestPalpitesView(unittest.TestCase):
         self.assertIn("PALPITES PROVISORIOS", texto)
         self.assertIn("Quesito", texto)
         self.assertIn("Venc", texto)
-        self.assertIn("PLACAR:", texto)
+        self.assertIn("Pts", texto)
+        participantes = participantes_ordenados_provisorio(blocos)
+        _, mapas = _mapas_palpites_provisorio(blocos)
+        totais = [_total_pontos_provisorio(nome, mapas) for nome in participantes]
+        self.assertEqual(totais, sorted(totais, reverse=True))
 
     def test_jogo_inexistente(self):
         with self.assertRaises(ValueError):

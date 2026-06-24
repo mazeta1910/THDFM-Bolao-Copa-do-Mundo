@@ -698,21 +698,23 @@ def exportar_palpites_provisorios_png(blocos, path: str | Path) -> None:
 
     from src.bandeiras import titulo_jogo_bandeiras
     from src.bandeiras_img import ALTURA_BANDEIRA, colar_confronto
+    from src.palpites_view import participantes_ordenados_provisorio
 
     realizados = [bloco for bloco in blocos if bloco.jogo.realizado]
     if not realizados:
         raise ValueError("Nenhum jogo com placar provisorio para exportar.")
 
     fontes = _carregar_fontes()
-    participantes = _participantes_alinhados(realizados)
+    participantes = participantes_ordenados_provisorio(blocos)
     largura_nome = _largura_nome_participantes(participantes, fontes["linha"])
+    largura_pts = LARGURA_COL_PTS_PALPITE
     x_nome = MARGEM
     x_jogos = x_nome + largura_nome + ESPACO_ENTRE_COLUNAS
     layouts = _layouts_jogos_provisorio(realizados, fontes, x_jogos)
     largura_jogos = sum(layout.largura for layout in layouts) + max(
         0, len(layouts) - 1
     ) * ESPACO_ENTRE_COLUNAS
-    largura_pts = LARGURA_COL_PTS_PALPITE
+    x_pts = x_jogos + largura_jogos + ESPACO_ENTRE_COLUNAS
     largura = (
         MARGEM * 2
         + largura_nome
@@ -721,7 +723,6 @@ def exportar_palpites_provisorios_png(blocos, path: str | Path) -> None:
         + ESPACO_ENTRE_COLUNAS
         + largura_pts
     )
-    x_pts = x_jogos + largura_jogos + ESPACO_ENTRE_COLUNAS
 
     altura_bandeiras = ALTURA_BANDEIRA + 10
     altura_titulos_jogos = 22 + altura_bandeiras
@@ -806,11 +807,9 @@ def exportar_palpites_provisorios_png(blocos, path: str | Path) -> None:
             fill=PAL_TEXTO,
             anchor="lm",
         )
-        total_pts = 0
+        total_pts = sum(mapa[nome].pontos or 0 for mapa in mapas)
         for layout, mapa in zip(layouts, mapas):
-            linha = mapa[nome]
-            total_pts += linha.pontos or 0
-            _desenhar_linha_participante_provisorio(draw, linha, layout, y, fontes=fontes)
+            _desenhar_linha_participante_provisorio(draw, mapa[nome], layout, y, fontes=fontes)
         draw.text(
             (x_pts + largura_pts // 2, y + ALTURA_LINHA // 2),
             str(total_pts),

@@ -150,16 +150,33 @@ def nome_arquivo_palpites(jogo_ids: list[int], extensao: str, *, provisorio: boo
     return f"{prefixo}_j{ids}.{extensao}"
 
 
-def formatar_palpites_provisorio_texto(blocos: list[PalpitesPorJogo]) -> str:
+def _mapas_palpites_provisorio(
+    blocos: list[PalpitesPorJogo],
+) -> tuple[list[PalpitesPorJogo], list[dict[str, PalpiteLinha]]]:
     realizados = [bloco for bloco in blocos if bloco.jogo.realizado]
+    mapas = [{linha.participante.strip(): linha for linha in bloco.linhas} for bloco in realizados]
+    return realizados, mapas
+
+
+def _total_pontos_provisorio(nome: str, mapas: list[dict[str, PalpiteLinha]]) -> int:
+    return sum(mapa[nome].pontos or 0 for mapa in mapas)
+
+
+def participantes_ordenados_provisorio(blocos: list[PalpitesPorJogo]) -> list[str]:
+    realizados, mapas = _mapas_palpites_provisorio(blocos)
+    participantes = {linha.participante.strip() for bloco in realizados for linha in bloco.linhas}
+    return sorted(
+        participantes,
+        key=lambda nome: (-_total_pontos_provisorio(nome, mapas), nome.lower()),
+    )
+
+
+def formatar_palpites_provisorio_texto(blocos: list[PalpitesPorJogo]) -> str:
+    realizados, mapas = _mapas_palpites_provisorio(blocos)
     if not realizados:
         return "PALPITES PROVISORIOS - CLASSIFICADURA BOLAO\n\nNenhum jogo com placar provisorio."
 
-    participantes = sorted(
-        {linha.participante.strip() for bloco in realizados for linha in bloco.linhas},
-        key=str.lower,
-    )
-    mapas = [{linha.participante.strip(): linha for linha in bloco.linhas} for bloco in realizados]
+    participantes = participantes_ordenados_provisorio(blocos)
 
     linhas = ["PALPITES PROVISORIOS - CLASSIFICADURA BOLAO", ""]
     for bloco in realizados:
@@ -171,14 +188,15 @@ def formatar_palpites_provisorio_texto(blocos: list[PalpitesPorJogo]) -> str:
         )
 
     cabecalho_jogos = "".join(f"  {'Pal':>5} {'Quesito':<10} {'Venc':<7}" for _ in realizados)
-    linhas.extend(["", f"{'Participante':<28}{cabecalho_jogos}  {'Pts':>3}", "-" * 72])
+    linhas.extend(
+        ["", f"{'Participante':<28}{cabecalho_jogos}  {'Pts':>3}", "-" * 76]
+    )
 
     for nome in participantes:
+        total = _total_pontos_provisorio(nome, mapas)
         texto = f"{nome:<28}"
-        total = 0
         for mapa in mapas:
             linha = mapa[nome]
-            total += linha.pontos or 0
             texto += (
                 f"  {linha.placar_texto:>5} "
                 f"{(linha.categoria or '-'):<10} {(linha.texto_vencedor or '-'):<7}"
