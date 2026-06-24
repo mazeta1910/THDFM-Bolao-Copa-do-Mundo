@@ -54,11 +54,31 @@ def _formatar_jogo(jogo) -> str:
     return f"Jogo {jogo.id}: {jogo.casa} x {jogo.fora}  ({jogo.data})"
 
 
+def _imprimir_ultimos_com_placar(bolao, *, limite: int = 2, titulo: str | None = None) -> None:
+    com_placar_lista = [jogo for jogo in bolao.jogos if jogo.realizado]
+    if not com_placar_lista:
+        print("Com placar: nenhum jogo lancado ainda.")
+        return
+
+    if titulo is None:
+        titulo = (
+            f"Ultimos com placar ({min(limite, len(com_placar_lista))} de {len(com_placar_lista)})"
+        )
+    print(titulo + ":")
+    for jogo in com_placar_lista[-limite:]:
+        print(
+            f"  Jogo {jogo.id}: {jogo.casa} x {jogo.fora}  "
+            f"-> {jogo.gols_casa}x{jogo.gols_fora}  ({jogo.data})"
+        )
+
+
 def _imprimir_contexto_jogos(
     *,
     pendentes: bool = False,
     com_placar: bool = False,
-    limite: int = 8,
+    limite_pendentes: int = 8,
+    limite_com_placar: int = 2,
+    mostrar_ultimos_com_placar: bool = True,
 ) -> None:
     bolao = _carregar_bolao()
     realizados_total = sum(1 for jogo in bolao.jogos if jogo.realizado)
@@ -68,26 +88,29 @@ def _imprimir_contexto_jogos(
         pendentes_lista = [jogo for jogo in bolao.jogos if not jogo.realizado]
         if pendentes_lista:
             print(f"Sem placar ({len(pendentes_lista)} no total):")
-            for jogo in pendentes_lista[:limite]:
+            for jogo in pendentes_lista[:limite_pendentes]:
                 print(f"  {_formatar_jogo(jogo)}")
-            if len(pendentes_lista) > limite:
-                print(f"  ... e mais {len(pendentes_lista) - limite} jogos")
+            if len(pendentes_lista) > limite_pendentes:
+                print(f"  ... e mais {len(pendentes_lista) - limite_pendentes} jogos")
         else:
             print("Sem placar: nenhum jogo pendente.")
 
+        if mostrar_ultimos_com_placar and not com_placar:
+            print()
+            _imprimir_ultimos_com_placar(
+                bolao,
+                limite=limite_com_placar,
+                titulo="Ultimos com placar (para alterar)",
+            )
+
     if com_placar:
-        com_placar_lista = [jogo for jogo in bolao.jogos if jogo.realizado]
-        if com_placar_lista:
-            print(f"Com placar ({len(com_placar_lista)} no total):")
-            for jogo in com_placar_lista[-limite:]:
-                print(
-                    f"  Jogo {jogo.id}: {jogo.casa} x {jogo.fora}  "
-                    f"-> {jogo.gols_casa}x{jogo.gols_fora}  ({jogo.data})"
-                )
-            if len(com_placar_lista) > limite:
-                print(f"  (mostrando os ultimos {limite})")
-        else:
-            print("Com placar: nenhum jogo lancado ainda.")
+        if pendentes:
+            print()
+        _imprimir_ultimos_com_placar(
+            bolao,
+            limite=limite_com_placar,
+            titulo=f"Com placar ({realizados_total} no total)",
+        )
 
     print()
 
@@ -195,7 +218,11 @@ def executar_menu() -> int:
             elif escolha == "6":
                 cmd_proximos(_namespace(limite=None))
             elif escolha == "7":
-                _imprimir_contexto_jogos(pendentes=True, com_placar=True)
+                _imprimir_contexto_jogos(
+                    pendentes=True,
+                    com_placar=True,
+                    mostrar_ultimos_com_placar=False,
+                )
                 jogos = _ler_jogos()
                 if not jogos:
                     _pausar()

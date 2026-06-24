@@ -1,32 +1,63 @@
 PALPITES PROVISORIOS - CLASSIFICADURA BOLAO
 
-Jogo 51: Suíça x Canadá  -> 2x1  (Suíça)
-Jogo 52: Bósnia e Herzegovina x Catar  -> 2x1  (Bósnia e Herzegovina)
+Jogo 51: Suíça x Canadá
+PLACAR: 2x1  |  Vencedor: Suíça
 
-Participante                    Pal Quesito    Venc       Pal Quesito    Venc     Pts
-------------------------------------------------------------------------
-Alisson Ottoni                1x   0 Nada       Acertou  2x   1 Placar     Acertou    7
-André Galinha                 1x   1 Gols fora  Errou    1x   0 Nada       Acertou    3
-Arthur SK                     3x   0 Nada       Acertou  3x   1 Gols fora  Acertou    5
-Ayrton                        1x   0 Nada       Acertou  2x   1 Placar     Acertou    7
-Benevides                     3x   0 Nada       Acertou  2x   0 Gols Casa  Acertou    5
-Diego Campos                  2x   0 Gols Casa  Acertou  2x   0 Gols Casa  Acertou    6
-Emboava                       2x   0 Gols Casa  Acertou  2x   0 Gols Casa  Acertou    6
-Gabs                          1x   1 Gols fora  Errou    0x   0 Nada       Errou      1
-Gui                           1x   0 Nada       Acertou  1x   0 Nada       Acertou    4
-Haron Bonamigo                2x   0 Gols Casa  Acertou  1x   2 Nada       Errou      3
-Hotel Plus Antonio Menezes    2x   2 Gols Casa  Errou    0x   1 Gols fora  Errou      2
-Jose Carlos                   3x   2 Nada       Acertou  2x   1 Placar     Acertou    7
-Juan                          2x   1 Placar     Acertou  2x   0 Gols Casa  Acertou    8
-JV JEC                        2x   1 Placar     Acertou  2x   0 Gols Casa  Acertou    8
-Lucas Copini                  2x   1 Placar     Acertou  0x   1 Gols fora  Errou      6
-Marlon Wietzikoski            1x   1 Gols fora  Errou    5x   0 Nada       Acertou    3
-Matheus Honorato              1x   2 Nada       Errou    1x   2 Nada       Errou      0
-Mazeta                        3x   2 Nada       Acertou  1x   0 Nada       Acertou    4
-Meta AI                       2x   1 Placar     Acertou  1x   0 Nada       Acertou    7
-Pylegend                      1x   1 Gols fora  Errou    1x   0 Nada       Acertou    3
-Ramos                         3x   0 Nada       Acertou  2x   0 Gols Casa  Acertou    5
-Rodri                         1x   3 Nada       Errou    1x   1 Gols fora  Errou      1
-Rodrigo (DDD 95)              1x   0 Nada       Acertou  3x   0 Nada       Acertou    4
-Til ponto                     3x   2 Nada       Acertou  1x   1 Gols fora  Errou      3
-Xonha                         2x   2 Gols Casa  Errou    0x   1 Gols fora  Errou      2
+Participante                 Pal   Pal  Quesito    Venc   
+--------------------------------------------------------------
+Juan                           2 x 1    Placar     Acertou
+JV JEC                         2 x 1    Placar     Acertou
+Lucas Copini                   2 x 1    Placar     Acertou
+Meta AI                        2 x 1    Placar     Acertou
+Diego Campos                   2 x 0    Gols Casa  Acertou
+Emboava                        2 x 0    Gols Casa  Acertou
+Haron Bonamigo                 2 x 0    Gols Casa  Acertou
+Alisson Ottoni                 1 x 0    Nada       Acertou
+Arthur SK                      3 x 0    Nada       Acertou
+Ayrton                         1 x 0    Nada       Acertou
+Benevides                      3 x 0    Nada       Acertou
+Gui                            1 x 0    Nada       Acertou
+Jose Carlos                    3 x 2    Nada       Acertou
+Mazeta                         3 x 2    Nada       Acertou
+Ramos                          3 x 0    Nada       Acertou
+Rodrigo (DDD 95)               1 x 0    Nada       Acertou
+Til ponto                      3 x 2    Nada       Acertou
+André Galinha                  1 x 1    Gols fora  Errou  
+Gabs                           1 x 1    Gols fora  Errou  
+Hotel Plus Antonio Menezes     2 x 2    Gols Casa  Errou  
+Marlon Wietzikoski             1 x 1    Gols fora  Errou  
+Pylegend                       1 x 1    Gols fora  Errou  
+Xonha                          2 x 2    Gols Casa  Errou  
+Matheus Honorato               1 x 2    Nada       Errou  
+Rodri                          1 x 3    Nada       Errou  
+
+Jogo 52: Bósnia e Herzegovina x Catar
+PLACAR: 3x1  |  Vencedor: Bósnia e Herzegovina
+
+Participante                 Pal   Pal  Quesito    Venc   
+--------------------------------------------------------------
+Arthur SK                      3 x 1    Placar     Acertou
+Alisson Ottoni                 2 x 1    Gols fora  Acertou
+Ayrton                         2 x 1    Gols fora  Acertou
+Jose Carlos                    2 x 1    Gols fora  Acertou
+Rodrigo (DDD 95)               3 x 0    Gols Casa  Acertou
+André Galinha                  1 x 0    Nada       Acertou
+Benevides                      2 x 0    Nada       Acertou
+Diego Campos                   2 x 0    Nada       Acertou
+Emboava                        2 x 0    Nada       Acertou
+Gui                            1 x 0    Nada       Acertou
+Juan                           2 x 0    Nada       Acertou
+JV JEC                         2 x 0    Nada       Acertou
+Marlon Wietzikoski             5 x 0    Nada       Acertou
+Mazeta                         1 x 0    Nada       Acertou
+Meta AI                        1 x 0    Nada       Acertou
+Pylegend                       1 x 0    Nada       Acertou
+Ramos                          2 x 0    Nada       Acertou
+Hotel Plus Antonio Menezes     0 x 1    Gols fora  Errou  
+Lucas Copini                   0 x 1    Gols fora  Errou  
+Rodri                          1 x 1    Gols fora  Errou  
+Til ponto                      1 x 1    Gols fora  Errou  
+Xonha                          0 x 1    Gols fora  Errou  
+Gabs                           0 x 0    Nada       Errou  
+Haron Bonamigo                 1 x 2    Nada       Errou  
+Matheus Honorato               1 x 2    Nada       Errou  
