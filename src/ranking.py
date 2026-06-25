@@ -92,12 +92,107 @@ def obter_classificacao(
     *,
     importada_path: str | Path | None = None,
 ) -> list[ClassificacaoLinha]:
-    """Usa a tabela importada do Excel, se existir; senao calcula dos palpites."""
+    """Carrega a tabela importada do Excel, se existir; senao calcula dos palpites."""
     if importada_path is not None:
         path = Path(importada_path)
         if path.exists():
             return carregar_classificacao_referencia(path)
     return gerar_classificacao(bolao)
+
+
+def _totais_da_base(base: list[ClassificacaoLinha]) -> dict[str, PontosParticipante]:
+    totais: dict[str, PontosParticipante] = {}
+    for linha in base:
+        chave = linha.participante.strip()
+        totais[chave] = PontosParticipante(
+            participante=linha.participante,
+            placar=linha.placar,
+            vencedor=linha.vencedor,
+            gols_casa=linha.gols_casa,
+            gols_fora=linha.gols_fora,
+        )
+    return totais
+
+
+def _classificacao_de_totais(totais: dict[str, PontosParticipante]) -> list[ClassificacaoLinha]:
+    ordenados = sorted(totais.values(), key=_sort_key)
+    return [
+        ClassificacaoLinha(
+            posicao=posicao,
+            participante=item.participante,
+            placar=item.placar,
+            vencedor=item.vencedor,
+            gols_casa=item.gols_casa,
+            gols_fora=item.gols_fora,
+            soma=item.soma,
+        )
+        for posicao, item in enumerate(ordenados, start=1)
+    ]
+
+
+def aplicar_jogos_novos(
+    bolao: BolaoData,
+    base: list[ClassificacaoLinha],
+    jogos_ids_baseline: set[int],
+) -> list[ClassificacaoLinha]:
+    """Soma pontos dos jogos novos sobre a classificacao de baseline (ex.: Excel)."""
+    jogos_novos = {jogo.id for jogo in bolao.jogos if jogo.realizado} - jogos_ids_baseline
+    if not jogos_novos:
+        return base
+
+    totais = _totais_da_base(base)
+    for nome in bolao.participantes:
+        chave = nome.strip()
+        if chave not in totais:
+            totais[chave] = PontosParticipante(participante=nome)
+
+    jogos_por_id = {jogo.id: jogo for jogo in bolao.jogos}
+    for palpite in bolao.palpites:
+        if palpite.jogo_id not in jogos_novos:
+            continue
+        jogo = jogos_por_id[palpite.jogo_id]
+        if not jogo.realizado:
+            continue
+        chave = palpite.participante.strip()
+        if chave not in totais:
+            totais[chave] = PontosParticipante(participante=palpite.participante)
+        totais[chave].adicionar(
+            pontos_detalhados(
+                palpite.palpite_casa,
+                palpite.palpite_fora,
+                jogo.gols_casa,
+                jogo.gols_fora,
+            )
+        )
+
+    return _classificacao_de_totais(totais)
+
+
+def classificacao_ativa(
+    bolao: BolaoData,
+    *,
+    importada_path: str | Path | None = None,
+    jogos_ids_baseline: set[int] | None = None,
+) -> list[ClassificacaoLinha]:
+    """Usa a importacao do Excel na baseline e soma apenas os jogos novos."""
+    calculada = gerar_classificacao(bolao)
+    jogos_atuais = {jogo.id for jogo in bolao.jogos if jogo.realizado}
+    novos = jogos_atuais - jogos_ids_baseline if jogos_ids_baseline is not None else set()
+
+    if novos and jogos_ids_baseline is not None:
+        if importada_path is not None:
+            path = Path(importada_path)
+            if path.exists():
+                base = carregar_classificacao_referencia(path)
+                return aplicar_jogos_novos(bolao, base, jogos_ids_baseline)
+        return calculada
+
+    if importada_path is not None:
+        path = Path(importada_path)
+        if path.exists():
+            return carregar_classificacao_referencia(path)
+
+    return calculada
 
 
 def exportar_classificacao(classificacao: list[ClassificacaoLinha], path: str | Path) -> None:

@@ -24,6 +24,7 @@ from src.ranking import (
     formatar_classificacao_compartilhar,
     gerar_classificacao,
     obter_classificacao,
+    classificacao_ativa,
     jogos_recem_realizados,
 )
 from src.snapshot import (
@@ -134,7 +135,13 @@ def _resolver_classificacao_importada() -> Path | None:
 
 
 def _classificacao_programa(bolao) -> list:
-    return obter_classificacao(bolao, importada_path=_resolver_classificacao_importada())
+    snapshot = carregar_snapshot(SNAPSHOT_JSON)
+    jogos_baseline = set(snapshot.get("jogos_ids", [])) if snapshot else None
+    return classificacao_ativa(
+        bolao,
+        importada_path=_resolver_classificacao_importada(),
+        jogos_ids_baseline=jogos_baseline,
+    )
 
 
 def _atualizar_exports_classificacao(bolao) -> None:
@@ -250,6 +257,16 @@ def cmd_importar_referencia(args: argparse.Namespace) -> int:
     print("Essa tabela passa a ser usada pelo programa (classificar, compartilhar e PNG).")
 
     bolao = carregar_bolao()
+    realizados = sum(1 for j in bolao.jogos if j.realizado)
+    jogos_ids = [jogo.id for jogo in bolao.jogos if j.realizado]
+    salvar_snapshot(
+        SNAPSHOT_JSON,
+        classificacao,
+        jogos_realizados=realizados,
+        jogos_ids=jogos_ids,
+    )
+    print(f"Baseline salva em {SNAPSHOT_JSON.name} ({realizados} jogos).")
+
     _atualizar_exports_classificacao(bolao)
     print(f"Arquivos atualizados: {CLASSIFICACAO_TXT.name}, {CLASSIFICACAO_CSV.name}", end="")
     if _PNG_DISPONIVEL:
