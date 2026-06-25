@@ -20,11 +20,11 @@ python scripts/download_bandeiras.py
 |---------|-----------|
 | `bolao.csv` | Exportação ativa da aba "Fase de grupos" (criada pelo `reset`) |
 | `classificacao_referencia.csv` | Classificação provisória (opcional, para validação) |
-| `resultados.csv` | Placares registrados via CLI (fonte oficial após o `reset`) |
+| `resultados.csv` | Placares registrados via CLI (versionado no Git para sincronizar entre PCs) |
 | `flags/` | Bandeiras reais em PNG (baixadas automaticamente ou via `bandeiras`) |
 | `classificacao_grupo.txt` | Tabela em texto para o grupo |
 | `classificacao_grupo.png` | Imagem da classificação (requer Pillow) |
-| `classificacao_snapshot.json` | Última classificação publicada (cálculo da variação) |
+| `classificacao_snapshot.json` | Baseline da coluna Rod (versionado no Git para sincronizar entre PCs) |
 
 ## Pontuação
 

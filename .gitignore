@@ -3,13 +3,11 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
-data/resultados.csv
 data/classificacao.csv
 
 # Exports gerados pelo CLI (PNG/txt locais)
 data/classificacao_grupo.png
 data/classificacao_grupo.txt
-data/classificacao_snapshot.json
 data/palpites_*.png
 data/palpites_*.txt
 data/rodada_*.png

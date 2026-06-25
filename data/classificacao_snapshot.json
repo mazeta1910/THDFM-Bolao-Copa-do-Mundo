@@ -1,0 +1,263 @@
+{
+  "jogos_realizados": 56,
+  "jogos_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56
+  ],
+  "participantes": {
+    "JV JEC": {
+      "posicao": 1,
+      "soma": 121,
+      "placar": 27,
+      "vencedor": 70,
+      "gols_casa": 12,
+      "gols_fora": 12
+    },
+    "Meta AI": {
+      "posicao": 2,
+      "soma": 117,
+      "placar": 21,
+      "vencedor": 70,
+      "gols_casa": 5,
+      "gols_fora": 21
+    },
+    "Lucas Copini": {
+      "posicao": 3,
+      "soma": 117,
+      "placar": 18,
+      "vencedor": 70,
+      "gols_casa": 15,
+      "gols_fora": 14
+    },
+    "Juan": {
+      "posicao": 4,
+      "soma": 117,
+      "placar": 15,
+      "vencedor": 72,
+      "gols_casa": 12,
+      "gols_fora": 18
+    },
+    "Alisson Ottoni": {
+      "posicao": 5,
+      "soma": 115,
+      "placar": 24,
+      "vencedor": 64,
+      "gols_casa": 9,
+      "gols_fora": 18
+    },
+    "Haron Bonamigo": {
+      "posicao": 6,
+      "soma": 114,
+      "placar": 24,
+      "vencedor": 66,
+      "gols_casa": 9,
+      "gols_fora": 15
+    },
+    "André Galinha": {
+      "posicao": 7,
+      "soma": 114,
+      "placar": 18,
+      "vencedor": 70,
+      "gols_casa": 9,
+      "gols_fora": 17
+    },
+    "Rodrigo (DDD 95)": {
+      "posicao": 8,
+      "soma": 112,
+      "placar": 18,
+      "vencedor": 66,
+      "gols_casa": 12,
+      "gols_fora": 16
+    },
+    "Jose Carlos": {
+      "posicao": 9,
+      "soma": 112,
+      "placar": 12,
+      "vencedor": 70,
+      "gols_casa": 19,
+      "gols_fora": 11
+    },
+    "Mazeta": {
+      "posicao": 10,
+      "soma": 111,
+      "placar": 18,
+      "vencedor": 66,
+      "gols_casa": 11,
+      "gols_fora": 16
+    },
+    "Benevides": {
+      "posicao": 11,
+      "soma": 110,
+      "placar": 6,
+      "vencedor": 72,
+      "gols_casa": 15,
+      "gols_fora": 17
+    },
+    "Ayrton": {
+      "posicao": 12,
+      "soma": 106,
+      "placar": 6,
+      "vencedor": 68,
+      "gols_casa": 9,
+      "gols_fora": 23
+    },
+    "Diego Campos": {
+      "posicao": 13,
+      "soma": 105,
+      "placar": 6,
+      "vencedor": 68,
+      "gols_casa": 11,
+      "gols_fora": 20
+    },
+    "Gui": {
+      "posicao": 14,
+      "soma": 103,
+      "placar": 18,
+      "vencedor": 60,
+      "gols_casa": 8,
+      "gols_fora": 17
+    },
+    "Til ponto": {
+      "posicao": 15,
+      "soma": 100,
+      "placar": 6,
+      "vencedor": 70,
+      "gols_casa": 10,
+      "gols_fora": 14
+    },
+    "Gabs": {
+      "posicao": 16,
+      "soma": 98,
+      "placar": 12,
+      "vencedor": 56,
+      "gols_casa": 12,
+      "gols_fora": 18
+    },
+    "Arthur SK": {
+      "posicao": 17,
+      "soma": 97,
+      "placar": 18,
+      "vencedor": 52,
+      "gols_casa": 9,
+      "gols_fora": 18
+    },
+    "Pylegend": {
+      "posicao": 18,
+      "soma": 97,
+      "placar": 12,
+      "vencedor": 62,
+      "gols_casa": 11,
+      "gols_fora": 12
+    },
+    "Ramos": {
+      "posicao": 19,
+      "soma": 96,
+      "placar": 18,
+      "vencedor": 58,
+      "gols_casa": 11,
+      "gols_fora": 9
+    },
+    "Emboava": {
+      "posicao": 20,
+      "soma": 95,
+      "placar": 9,
+      "vencedor": 58,
+      "gols_casa": 13,
+      "gols_fora": 15
+    },
+    "Hotel Plus Antonio Menezes": {
+      "posicao": 21,
+      "soma": 94,
+      "placar": 15,
+      "vencedor": 54,
+      "gols_casa": 12,
+      "gols_fora": 13
+    },
+    "Marlon Wietzikoski": {
+      "posicao": 22,
+      "soma": 92,
+      "placar": 15,
+      "vencedor": 50,
+      "gols_casa": 9,
+      "gols_fora": 18
+    },
+    "Rodri": {
+      "posicao": 23,
+      "soma": 91,
+      "placar": 12,
+      "vencedor": 54,
+      "gols_casa": 8,
+      "gols_fora": 17
+    },
+    "Xonha": {
+      "posicao": 24,
+      "soma": 88,
+      "placar": 18,
+      "vencedor": 48,
+      "gols_casa": 5,
+      "gols_fora": 17
+    },
+    "Matheus Honorato": {
+      "posicao": 25,
+      "soma": 52,
+      "placar": 3,
+      "vencedor": 26,
+      "gols_casa": 15,
+      "gols_fora": 8
+    }
+  }
+}
