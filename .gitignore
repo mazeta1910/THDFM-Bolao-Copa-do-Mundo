@@ -5,7 +5,6 @@ __pycache__/
 venv/
 data/resultados.csv
 data/classificacao.csv
-data/flags/
 
 # Exports gerados pelo CLI (PNG/txt locais)
 data/classificacao_grupo.png
