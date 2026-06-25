@@ -27,6 +27,8 @@ class TestBandeiras(unittest.TestCase):
         self.assertEqual(iso_time("África do Sul"), "ZA")
         self.assertEqual(iso_time("México"), "MX")
         self.assertEqual(iso_time("Coréia do Sul"), "KR")
+        self.assertEqual(iso_time("Curaçau"), "CW")
+        self.assertEqual(iso_time("Curaçao"), "CW")
 
     def test_imagem_bandeira_do_cache(self):
         with tempfile.TemporaryDirectory() as tmp:

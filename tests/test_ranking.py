@@ -1,7 +1,9 @@
+import tempfile
 import unittest
+from pathlib import Path
 
 from src.models import BolaoData, Jogo, Palpite
-from src.ranking import calcular_variacoes_da_rodada
+from src.ranking import calcular_variacoes_da_rodada, gerar_classificacao, obter_classificacao
 
 
 class TestVariacoesDaRodada(unittest.TestCase):
@@ -42,6 +44,26 @@ class TestVariacoesDaRodada(unittest.TestCase):
         bolao.jogos[1].gols_fora = 0
         variacoes_corrigido = calcular_variacoes_da_rodada(bolao, baseline)
         self.assertTrue(all(valor >= 0 for valor in variacoes_corrigido.values()))
+
+
+class TestObterClassificacao(unittest.TestCase):
+    def test_usa_csv_importado_quando_existe(self):
+        bolao = BolaoData(
+            jogos=[Jogo(id=1, casa="A", fora="B", data="01/01", gols_casa=1, gols_fora=0)],
+            participantes=["Ana"],
+            palpites=[Palpite(participante="Ana", jogo_id=1, palpite_casa=0, palpite_fora=0)],
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "classificacao.csv"
+            path.write_text(
+                "CLASSIFICAÇÃO ATUAL - FASE DE GRUPOS (ORDENADA),,,,,,\n"
+                ",,Placar,Vencedor,Gols casa,Gols fora,Soma dos pontos\n"
+                "1,Ana,9,8,1,2,20\n",
+                encoding="utf-8",
+            )
+            classificacao = obter_classificacao(bolao, importada_path=path)
+            self.assertEqual(classificacao[0].soma, 20)
+            self.assertNotEqual(gerar_classificacao(bolao)[0].soma, 20)
 
 
 if __name__ == "__main__":

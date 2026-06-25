@@ -23,6 +23,7 @@ from src.ranking import (
     exportar_classificacao_texto,
     formatar_classificacao_compartilhar,
     gerar_classificacao,
+    obter_classificacao,
     jogos_recem_realizados,
 )
 from src.snapshot import (
@@ -125,8 +126,44 @@ def _carregar_baseline_variacao() -> tuple[dict[str, dict] | None, set[int], boo
     return None, set(), False
 
 
+def _resolver_classificacao_importada() -> Path | None:
+    path = _resolve_arquivo(
+        REFERENCIA_CSV, "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv"
+    )
+    return path if path.exists() else None
+
+
+def _classificacao_programa(bolao) -> list:
+    return obter_classificacao(bolao, importada_path=_resolver_classificacao_importada())
+
+
+def _atualizar_exports_classificacao(bolao) -> None:
+    classificacao = _classificacao_programa(bolao)
+    realizados = sum(1 for j in bolao.jogos if j.realizado)
+    variacoes = calcular_variacoes(classificacao, None)
+    mudancas_posicao = calcular_mudancas_posicao(classificacao, None)
+    exportar_classificacao(classificacao, CLASSIFICACAO_CSV)
+    exportar_classificacao_texto(
+        classificacao,
+        CLASSIFICACAO_TXT,
+        jogos_realizados=realizados,
+        total_jogos=len(bolao.jogos),
+        variacoes=variacoes,
+        mudancas_posicao=mudancas_posicao,
+    )
+    if _PNG_DISPONIVEL:
+        exportar_classificacao_png(
+            classificacao,
+            CLASSIFICACAO_PNG,
+            jogos_realizados=realizados,
+            total_jogos=len(bolao.jogos),
+            variacoes=variacoes,
+            mudancas_posicao=mudancas_posicao,
+        )
+
+
 def _salvar_baseline(bolao, *, mensagem_snapshot: bool = True) -> None:
-    classificacao = gerar_classificacao(bolao)
+    classificacao = _classificacao_programa(bolao)
     realizados = sum(1 for j in bolao.jogos if j.realizado)
     jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
     salvar_snapshot(
@@ -206,9 +243,20 @@ def cmd_importar_referencia(args: argparse.Namespace) -> int:
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     shutil.copy2(origem, REFERENCIA_CSV)
-    referencia = carregar_classificacao_referencia(REFERENCIA_CSV)
-    print(f"Referência importada: {len(referencia)} participantes em {REFERENCIA_CSV.name}")
-    print("Rode 'python -m src.cli conferir' para validar a pontuação.")
+    classificacao = carregar_classificacao_referencia(REFERENCIA_CSV)
+    print(
+        f"Classificação importada: {len(classificacao)} participantes em {REFERENCIA_CSV.name}"
+    )
+    print("Essa tabela passa a ser usada pelo programa (classificar, compartilhar e PNG).")
+
+    bolao = carregar_bolao()
+    _atualizar_exports_classificacao(bolao)
+    print(f"Arquivos atualizados: {CLASSIFICACAO_TXT.name}, {CLASSIFICACAO_CSV.name}", end="")
+    if _PNG_DISPONIVEL:
+        print(f", {CLASSIFICACAO_PNG.name}")
+    else:
+        print()
+        print("PNG não gerado: instale Pillow com 'pip install pillow'.", file=sys.stderr)
     return 0
 
 
@@ -304,14 +352,14 @@ def _imprimir_classificacao(classificacao: list) -> None:
 
 def cmd_classificar(args: argparse.Namespace) -> int:
     bolao = carregar_bolao()
-    classificacao = gerar_classificacao(bolao)
+    classificacao = _classificacao_programa(bolao)
     _imprimir_classificacao(classificacao)
     return 0
 
 
 def cmd_exportar(args: argparse.Namespace) -> int:
     bolao = carregar_bolao()
-    classificacao = gerar_classificacao(bolao)
+    classificacao = _classificacao_programa(bolao)
     exportar_classificacao(classificacao, CLASSIFICACAO_CSV)
     print(f"Classificação exportada para {CLASSIFICACAO_CSV}")
     return 0
@@ -344,7 +392,7 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
         sys.stdout.reconfigure(encoding="utf-8")
 
     bolao = carregar_bolao()
-    classificacao = gerar_classificacao(bolao)
+    classificacao = _classificacao_programa(bolao)
     realizados = sum(1 for j in bolao.jogos if j.realizado)
     jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
 
@@ -782,12 +830,12 @@ def main(argv: list[str] | None = None) -> int:
 
     p_importar_referencia = subparsers.add_parser(
         "importar-referencia",
-        help="Importa CSV da classificacao provisoria exportada do Excel",
+        help="Importa a classificacao do Excel como tabela ativa do programa",
     )
     p_importar_referencia.add_argument(
         "--arquivo",
         required=True,
-        help="CSV da aba CLASSIFICACAO PROVISORIA",
+        help="CSV da aba CLASSIFICACAO PROVISORIA exportado do Excel",
     )
     p_importar_referencia.set_defaults(func=cmd_importar_referencia)
 

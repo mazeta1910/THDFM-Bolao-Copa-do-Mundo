@@ -63,20 +63,30 @@ BANDEIRAS_ESPECIAIS: dict[str, str] = {
     + "".join(chr(c) for c in (0xE0067, 0xE0062, 0xE0073, 0xE0063, 0xE0074, 0xE007F)),
 }
 
+# Variantes de grafia usadas na planilha (apos _normalizar).
+ALIASES_TIMES: dict[str, str] = {
+    "Curacau": "Curacao",
+}
+
+
+def _chave_time(nome: str) -> str:
+    chave = _normalizar(nome)
+    return ALIASES_TIMES.get(chave, chave)
+
 
 def bandeira_iso(codigo: str) -> str:
     return "".join(chr(127397 + ord(letra)) for letra in codigo.upper())
 
 
 def iso_time(nome: str) -> str | None:
-    chave = _normalizar(nome)
+    chave = _chave_time(nome)
     if chave in BANDEIRAS_ESPECIAIS:
         return "SCO"
     return TIMES_ISO.get(chave)
 
 
 def bandeira_time(nome: str) -> str:
-    chave = _normalizar(nome)
+    chave = _chave_time(nome)
     if chave in BANDEIRAS_ESPECIAIS:
         return BANDEIRAS_ESPECIAIS[chave]
     codigo = TIMES_ISO.get(chave)

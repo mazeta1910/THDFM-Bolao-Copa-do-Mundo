@@ -87,6 +87,19 @@ def gerar_classificacao(bolao: BolaoData) -> list[ClassificacaoLinha]:
     return classificacao
 
 
+def obter_classificacao(
+    bolao: BolaoData,
+    *,
+    importada_path: str | Path | None = None,
+) -> list[ClassificacaoLinha]:
+    """Usa a tabela importada do Excel, se existir; senao calcula dos palpites."""
+    if importada_path is not None:
+        path = Path(importada_path)
+        if path.exists():
+            return carregar_classificacao_referencia(path)
+    return gerar_classificacao(bolao)
+
+
 def exportar_classificacao(classificacao: list[ClassificacaoLinha], path: str | Path) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

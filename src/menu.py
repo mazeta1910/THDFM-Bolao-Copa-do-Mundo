@@ -185,6 +185,7 @@ def _imprimir_cabecalho() -> None:
     print(" 10. Salvar baseline pre-rodada")
     print(" 11. Validar bolao")
     print(" 12. Conferir com referencia do Excel")
+    print(" 13. Importar classificacao do Excel")
     print()
     print("  0. Sair")
 
@@ -195,6 +196,7 @@ def executar_menu() -> int:
         cmd_classificar,
         cmd_compartilhar,
         cmd_conferir,
+        cmd_importar_referencia,
         cmd_palpites,
         cmd_proximos,
         cmd_resultado,
@@ -319,6 +321,16 @@ def executar_menu() -> int:
                 cmd_validar(_namespace())
             elif escolha == "12":
                 cmd_conferir(_namespace())
+            elif escolha == "13":
+                caminho = _ler_linha(
+                    "Caminho do CSV (Enter = data/BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv): "
+                )
+                if _texto_cancelado(caminho):
+                    print("Cancelado.")
+                    continue
+                if not caminho:
+                    caminho = "data/BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv"
+                cmd_importar_referencia(_namespace(arquivo=caminho))
             else:
                 print("Opcao invalida.")
         except ValueError as exc:
