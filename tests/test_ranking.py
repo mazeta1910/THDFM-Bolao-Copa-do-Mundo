@@ -6,6 +6,7 @@ from src.models import BolaoData, ClassificacaoLinha, Jogo, Palpite
 from src.ranking import (
     aplicar_jogos_novos,
     calcular_variacoes_da_rodada,
+    calcular_variacoes_jogos,
     classificacao_ativa,
     gerar_classificacao,
     obter_classificacao,
@@ -50,6 +51,13 @@ class TestVariacoesDaRodada(unittest.TestCase):
         bolao.jogos[1].gols_fora = 0
         variacoes_corrigido = calcular_variacoes_da_rodada(bolao, baseline)
         self.assertTrue(all(valor >= 0 for valor in variacoes_corrigido.values()))
+
+    def test_variacoes_apenas_jogos_informados(self):
+        bolao = self._bolao_minimo()
+        variacoes = calcular_variacoes_jogos(bolao, {2})
+        self.assertEqual(variacoes["Ana"], 5)
+        self.assertEqual(variacoes["Bob"], 2)
+        self.assertEqual(calcular_variacoes_jogos(bolao, {1, 2})["Ana"], 10)
 
 
 class TestObterClassificacao(unittest.TestCase):

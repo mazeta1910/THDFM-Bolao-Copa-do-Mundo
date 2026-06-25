@@ -17,15 +17,15 @@ from src.loader import (
 )
 from src.ranking import (
     calcular_variacoes_da_rodada,
+    calcular_variacoes_jogos,
     carregar_classificacao_referencia,
     comparar_classificacoes,
     exportar_classificacao,
     exportar_classificacao_texto,
     formatar_classificacao_compartilhar,
     gerar_classificacao,
-    obter_classificacao,
-    classificacao_ativa,
     jogos_recem_realizados,
+    resumir_jogos_export,
 )
 from src.snapshot import (
     calcular_mudancas_posicao,
@@ -127,21 +127,9 @@ def _carregar_baseline_variacao() -> tuple[dict[str, dict] | None, set[int], boo
     return None, set(), False
 
 
-def _resolver_classificacao_importada() -> Path | None:
-    path = _resolve_arquivo(
-        REFERENCIA_CSV, "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv"
-    )
-    return path if path.exists() else None
-
-
 def _classificacao_programa(bolao) -> list:
-    snapshot = carregar_snapshot(SNAPSHOT_JSON)
-    jogos_baseline = set(snapshot.get("jogos_ids", [])) if snapshot else None
-    return classificacao_ativa(
-        bolao,
-        importada_path=_resolver_classificacao_importada(),
-        jogos_ids_baseline=jogos_baseline,
-    )
+    """Total de pontos calculado dos palpites e resultados lancados."""
+    return gerar_classificacao(bolao)
 
 
 def _atualizar_exports_classificacao(bolao) -> None:
@@ -435,6 +423,14 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
         else []
     )
 
+    jogo_ids_export = getattr(args, "jogo", None)
+    legenda_rodada = None
+    if jogo_ids_export:
+        variacoes = calcular_variacoes_jogos(bolao, set(jogo_ids_export))
+        jogos_novos = resumir_jogos_export(bolao, jogo_ids_export)
+        ids_txt = ", ".join(str(jogo_id) for jogo_id in jogo_ids_export)
+        legenda_rodada = f"Rod = pontos nos jogos {ids_txt} desta imagem"
+
     texto = formatar_classificacao_compartilhar(
         classificacao,
         jogos_realizados=realizados,
@@ -442,6 +438,7 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
         variacoes=variacoes,
         mudancas_posicao=mudancas_posicao,
         jogos_novos=jogos_novos or None,
+        legenda_rodada=legenda_rodada,
     )
     print(texto)
 
@@ -454,6 +451,7 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
             variacoes=variacoes,
             mudancas_posicao=mudancas_posicao,
             jogos_novos=jogos_novos or None,
+            legenda_rodada=legenda_rodada,
         )
         print(f"\nTexto salvo em {CLASSIFICACAO_TXT}")
 

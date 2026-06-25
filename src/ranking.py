@@ -35,16 +35,21 @@ def calcular_variacoes_da_rodada(
     jogos_da_rodada = {
         jogo.id for jogo in bolao.jogos if jogo.realizado and jogo.id not in jogos_ids_baseline
     }
+    return calcular_variacoes_jogos(bolao, jogos_da_rodada)
+
+
+def calcular_variacoes_jogos(bolao: BolaoData, jogos_ids: set[int]) -> dict[str, int]:
+    """Pontos ganhos em um conjunto especifico de jogos realizados."""
     variacoes = {nome: 0 for nome in bolao.participantes}
-    if not jogos_da_rodada:
+    if not jogos_ids:
         return variacoes
 
     jogos_por_id = {jogo.id: jogo for jogo in bolao.jogos}
     for palpite in bolao.palpites:
-        if palpite.jogo_id not in jogos_da_rodada:
+        if palpite.jogo_id not in jogos_ids:
             continue
-        jogo = jogos_por_id[palpite.jogo_id]
-        if not jogo.realizado:
+        jogo = jogos_por_id.get(palpite.jogo_id)
+        if jogo is None or not jogo.realizado:
             continue
         variacoes[palpite.participante] += pontos_jogo(
             palpite.palpite_casa,
@@ -239,6 +244,7 @@ def formatar_classificacao_compartilhar(
     variacoes: dict[str, int | None] | None = None,
     mudancas_posicao: dict[str, int | None] | None = None,
     jogos_novos: list[str] | None = None,
+    legenda_rodada: str | None = None,
 ) -> str:
     linhas = [
         "CLASSIFICADURA BOLAO - COPA DO MUNDO 2026",
@@ -257,7 +263,7 @@ def formatar_classificacao_compartilhar(
     linhas.extend(
         [
             "",
-            "Rod = pontos nos jogos novos desde a ultima rodada confirmada",
+            legenda_rodada or "Rod = pontos nos jogos novos desde a ultima rodada confirmada",
             "Placar 3 | Vencedor 2 | Gols casa/fora 1",
             "Desempate: placar -> vencedor -> gols casa -> gols fora",
         ]
@@ -274,6 +280,7 @@ def exportar_classificacao_texto(
     variacoes: dict[str, int | None] | None = None,
     mudancas_posicao: dict[str, int | None] | None = None,
     jogos_novos: list[str] | None = None,
+    legenda_rodada: str | None = None,
 ) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -284,6 +291,7 @@ def exportar_classificacao_texto(
         variacoes=variacoes,
         mudancas_posicao=mudancas_posicao,
         jogos_novos=jogos_novos,
+        legenda_rodada=legenda_rodada,
     )
     path.write_text(texto + "\n", encoding="utf-8")
 
@@ -296,6 +304,19 @@ def jogos_recem_realizados(bolao: BolaoData, jogos_ids_anteriores: set[int]) -> 
                 f"Novo: {jogo.casa} {jogo.gols_casa}x{jogo.gols_fora} {jogo.fora} (jogo {jogo.id})"
             )
     return novos
+
+
+def resumir_jogos_export(bolao: BolaoData, jogo_ids: list[int]) -> list[str]:
+    jogos_por_id = {jogo.id: jogo for jogo in bolao.jogos}
+    linhas: list[str] = []
+    for jogo_id in jogo_ids:
+        jogo = jogos_por_id.get(jogo_id)
+        if jogo is None or not jogo.realizado:
+            continue
+        linhas.append(
+            f"Novo: {jogo.casa} {jogo.gols_casa}x{jogo.gols_fora} {jogo.fora} (jogo {jogo.id})"
+        )
+    return linhas
 
 
 def carregar_classificacao_referencia(path: str | Path) -> list[ClassificacaoLinha]:
