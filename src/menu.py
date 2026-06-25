@@ -26,6 +26,47 @@ def _ler_linha(mensagem: str) -> str | None:
         return None
 
 
+def _texto_cancelado(texto: str | None) -> bool:
+    if texto is None:
+        return True
+    return texto.lower() in {"", "sair", "s", "q", "quit", "cancelar", "c"}
+
+
+def _buscar_jogo(bolao, jogo_id: int):
+    return next((jogo for jogo in bolao.jogos if jogo.id == jogo_id), None)
+
+
+def _ler_jogo_para_placar() -> tuple[int, object] | None:
+    bolao = _carregar_bolao()
+    while True:
+        jogo_texto = _ler_linha("ID do jogo (Enter/sair cancela): ")
+        if _texto_cancelado(jogo_texto):
+            return None
+        try:
+            jogo_id = int(jogo_texto)
+        except ValueError:
+            print("Use o numero do jogo, ex: 50")
+            continue
+
+        jogo = _buscar_jogo(bolao, jogo_id)
+        if jogo is None:
+            print(f"Jogo {jogo_id} nao encontrado.")
+            continue
+        return jogo_id, jogo
+
+
+def _ler_placar_jogo(jogo) -> str | None:
+    if jogo.realizado:
+        print(
+            f"  Placar atual: {jogo.gols_casa}x{jogo.gols_fora} "
+            "(sera substituido se informar outro)"
+        )
+    return _ler_linha(
+        f"Placar Jogo {jogo.id} ({jogo.casa} x {jogo.fora}) "
+        f"[Enter/sair cancela]: "
+    )
+
+
 def _ler_jogos(
     mensagem: str = "IDs dos jogos (ex: 51 52): ",
     *,
@@ -83,7 +124,7 @@ def _imprimir_contexto_jogos(
     pendentes: bool = False,
     com_placar: bool = False,
     limite_pendentes: int = 8,
-    limite_com_placar: int = 2,
+    limite_com_placar: int = 6,
     mostrar_ultimos_com_placar: bool = True,
 ) -> None:
     bolao = _carregar_bolao()
@@ -200,26 +241,32 @@ def executar_menu() -> int:
                         sem_snapshot=False,
                         confirmar_rodada=True,
                         zerar_variacao=False,
+                        jogo=None,
                     )
                 )
             elif escolha == "3":
-                _imprimir_contexto_jogos(pendentes=True)
-                jogo_texto = _ler_linha("ID do jogo: ")
-                if not jogo_texto:
+                _imprimir_contexto_jogos(pendentes=True, limite_com_placar=6)
+                entrada = _ler_jogo_para_placar()
+                if entrada is None:
+                    print("Cancelado.")
                     continue
-                placar = _ler_linha("Placar (ex: 2-1): ")
-                if not placar:
+                jogo_id, jogo = entrada
+                print(f"  {_formatar_jogo(jogo)}")
+                placar = _ler_placar_jogo(jogo)
+                if _texto_cancelado(placar):
+                    print("Cancelado.")
                     continue
                 cmd_resultado(
                     _namespace(
-                        jogo=[int(jogo_texto)],
+                        jogo=[jogo_id],
                         placar=placar,
                         remover=False,
                         interativo=False,
                     )
                 )
             elif escolha == "4":
-                _imprimir_contexto_jogos(pendentes=True)
+                _imprimir_contexto_jogos(pendentes=True, limite_com_placar=6)
+                print("Enter pula o jogo; 'sair' encerra sem perder o que ja foi lancado.\n")
                 cmd_resultado(
                     _namespace(jogo=None, placar=None, remover=False, interativo=True)
                 )

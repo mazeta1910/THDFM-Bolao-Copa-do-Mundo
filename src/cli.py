@@ -256,14 +256,16 @@ def cmd_resultado(args: argparse.Namespace) -> int:
             print("Todos os jogos já têm resultado.")
             return 0
 
-        print("Digite o placar, Enter para pular ou 'sair' para encerrar.\n")
+        print("Enter pula o jogo; 'sair' ou 'cancelar' encerra.\n")
         try:
             for jogo in pendentes:
-                print(f"Jogo {jogo.id}: {jogo.casa} x {jogo.fora} ({jogo.data})")
-                texto = input("Placar (ex: 2-1): ").strip()
+                texto = input(
+                    f"Jogo {jogo.id}: {jogo.casa} x {jogo.fora} ({jogo.data})\n"
+                    f"Placar [Enter pula / sair cancela]: "
+                ).strip()
                 if not texto:
                     continue
-                if texto.lower() in {"sair", "s", "q", "quit"}:
+                if texto.lower() in {"sair", "s", "q", "quit", "cancelar", "c"}:
                     print("Encerrando. Resultados ja registrados serao salvos.")
                     break
                 try:
@@ -408,20 +410,21 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
             )
             print(f"Imagem salva em {CLASSIFICACAO_PNG}")
 
-    if args.jogo and not args.sem_png:
+    jogo_ids = getattr(args, "jogo", None)
+    if jogo_ids and not args.sem_png:
         if not _PNG_DISPONIVEL:
             print(
                 "Imagem completa nao gerada: instale Pillow com 'pip install pillow'.",
                 file=sys.stderr,
             )
         else:
-            blocos = listar_palpites_jogos(bolao, args.jogo)
+            blocos = listar_palpites_jogos(bolao, jogo_ids)
             sem_placar = [bloco.jogo.id for bloco in blocos if not bloco.jogo.realizado]
             if sem_placar:
                 ids = ", ".join(str(jogo_id) for jogo_id in sem_placar)
                 print(f"Jogos sem placar provisorio: {ids}", file=sys.stderr)
                 return 1
-            rodada_path = DATA_DIR / nome_arquivo_rodada(args.jogo)
+            rodada_path = DATA_DIR / nome_arquivo_rodada(jogo_ids)
             exportar_rodada_completa_png(
                 classificacao,
                 blocos,
