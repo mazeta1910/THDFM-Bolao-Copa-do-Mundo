@@ -26,6 +26,7 @@ from src.ranking import (
     gerar_classificacao,
     jogos_recem_realizados,
     resumir_jogos_export,
+    sugerir_jogos_provisorios,
 )
 from src.snapshot import (
     calcular_mudancas_posicao,
@@ -424,6 +425,12 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
     )
 
     jogo_ids_export = getattr(args, "jogo", None)
+    if not jogo_ids_export:
+        ultimos = getattr(args, "ultimos", None)
+        if ultimos is not None:
+            jogo_ids_export = sugerir_jogos_provisorios(
+                bolao, jogos_ids_anteriores, limite=ultimos
+            )
     legenda_rodada = None
     if jogo_ids_export:
         variacoes = calcular_variacoes_jogos(bolao, set(jogo_ids_export))
@@ -473,7 +480,7 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
             )
             print(f"Imagem salva em {CLASSIFICACAO_PNG}")
 
-    jogo_ids = getattr(args, "jogo", None)
+    jogo_ids = jogo_ids_export if jogo_ids_export else getattr(args, "jogo", None)
     if jogo_ids and not args.sem_png:
         if not _PNG_DISPONIVEL:
             print(
@@ -765,6 +772,12 @@ def main(argv: list[str] | None = None) -> int:
         nargs="+",
         metavar="ID",
         help="Inclui palpites provisorios na imagem completa (ex: --jogo 51 52)",
+    )
+    p_compartilhar.add_argument(
+        "--ultimos",
+        type=int,
+        metavar="N",
+        help="Usa os ultimos N jogos novos (ou com placar) na imagem completa (ex: --ultimos 2)",
     )
     p_compartilhar.set_defaults(func=cmd_compartilhar)
 

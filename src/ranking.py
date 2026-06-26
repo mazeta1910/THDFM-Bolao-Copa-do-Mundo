@@ -296,6 +296,23 @@ def exportar_classificacao_texto(
     path.write_text(texto + "\n", encoding="utf-8")
 
 
+def sugerir_jogos_provisorios(
+    bolao: BolaoData,
+    jogos_ids_baseline: set[int],
+    *,
+    limite: int = 2,
+) -> list[int]:
+    novos = [
+        jogo.id
+        for jogo in bolao.jogos
+        if jogo.realizado and jogo.id not in jogos_ids_baseline
+    ]
+    if novos:
+        return novos[-limite:]
+    com_placar = [jogo.id for jogo in bolao.jogos if jogo.realizado]
+    return com_placar[-limite:]
+
+
 def jogos_recem_realizados(bolao: BolaoData, jogos_ids_anteriores: set[int]) -> list[str]:
     novos = []
     for jogo in bolao.jogos:

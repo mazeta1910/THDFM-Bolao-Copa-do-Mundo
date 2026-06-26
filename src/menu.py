@@ -71,15 +71,22 @@ def _ler_jogos(
     mensagem: str = "IDs dos jogos (ex: 51 52): ",
     *,
     opcional: bool = False,
+    padrao: list[int] | None = None,
 ) -> list[int] | None:
     texto = _ler_linha(mensagem)
     if texto is None:
         return None
     if not texto:
+        if padrao is not None:
+            if padrao:
+                print(f"  -> jogos {', '.join(str(jogo_id) for jogo_id in padrao)}")
+            return list(padrao)
         if opcional:
             return []
         print("Nenhum jogo informado.")
         return None
+    if texto.lower() in {"-", "0", "nenhum", "nao", "n"}:
+        return []
     try:
         return [int(parte) for parte in texto.split()]
     except ValueError:
@@ -192,6 +199,7 @@ def _imprimir_cabecalho() -> None:
 
 def executar_menu() -> int:
     from src.cli import (
+        _carregar_baseline_variacao,
         cmd_baseline,
         cmd_classificar,
         cmd_compartilhar,
@@ -218,9 +226,25 @@ def executar_menu() -> int:
         try:
             if escolha == "1":
                 _imprimir_contexto_jogos(com_placar=True, limite_com_placar=4)
+                bolao = _carregar_bolao()
+                _, baseline_ids, _ = _carregar_baseline_variacao()
+                from src.ranking import sugerir_jogos_provisorios
+
+                sugeridos = sugerir_jogos_provisorios(bolao, baseline_ids, limite=2)
+                if sugeridos:
+                    sugestao = " ".join(str(jogo_id) for jogo_id in sugeridos)
+                    mensagem_jogos = (
+                        "Jogos provisorios na imagem completa "
+                        f"(Enter = {sugestao}, - = so classificacao): "
+                    )
+                else:
+                    mensagem_jogos = (
+                        "Jogos provisorios na imagem completa (Enter = so classificacao): "
+                    )
                 jogos = _ler_jogos(
-                    "Jogos provisorios na imagem completa (Enter = so classificacao): ",
+                    mensagem_jogos,
                     opcional=True,
+                    padrao=sugeridos if sugeridos else None,
                 )
                 if jogos is None:
                     _pausar()

@@ -10,6 +10,7 @@ from src.ranking import (
     classificacao_ativa,
     gerar_classificacao,
     obter_classificacao,
+    sugerir_jogos_provisorios,
 )
 
 
@@ -178,6 +179,40 @@ class TestAplicarJogosNovos(unittest.TestCase):
         bob = next(linha for linha in classificacao if linha.participante == "Bob")
         self.assertEqual(ana.soma, 25)
         self.assertEqual(bob.soma, 2)
+
+
+class TestSugerirJogosProvisorios(unittest.TestCase):
+    def _bolao_tres_jogos(self) -> BolaoData:
+        return BolaoData(
+            jogos=[
+                Jogo(id=1, casa="A", fora="B", data="01/01", gols_casa=1, gols_fora=0),
+                Jogo(id=2, casa="C", fora="D", data="02/01", gols_casa=2, gols_fora=2),
+                Jogo(id=3, casa="E", fora="F", data="03/01", gols_casa=0, gols_fora=1),
+            ],
+            participantes=["Ana"],
+            palpites=[],
+        )
+
+    def test_prioriza_jogos_novos_desde_baseline(self):
+        bolao = self._bolao_tres_jogos()
+        self.assertEqual(sugerir_jogos_provisorios(bolao, {1, 2}, limite=2), [3])
+
+    def test_retorna_ultimos_com_placar_sem_jogos_novos(self):
+        bolao = self._bolao_tres_jogos()
+        self.assertEqual(sugerir_jogos_provisorios(bolao, {1, 2, 3}, limite=2), [2, 3])
+
+    def test_limita_a_dois_jogos_novos(self):
+        bolao = BolaoData(
+            jogos=[
+                Jogo(id=1, casa="A", fora="B", data="01/01", gols_casa=1, gols_fora=0),
+                Jogo(id=2, casa="C", fora="D", data="02/01", gols_casa=1, gols_fora=1),
+                Jogo(id=3, casa="E", fora="F", data="03/01", gols_casa=2, gols_fora=0),
+                Jogo(id=4, casa="G", fora="H", data="04/01", gols_casa=0, gols_fora=0),
+            ],
+            participantes=["Ana"],
+            palpites=[],
+        )
+        self.assertEqual(sugerir_jogos_provisorios(bolao, {1, 2}, limite=2), [3, 4])
 
 
 if __name__ == "__main__":
