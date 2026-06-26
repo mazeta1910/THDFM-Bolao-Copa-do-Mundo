@@ -6,26 +6,39 @@ from pathlib import Path
 from src.models import ClassificacaoLinha
 from src.snapshot import formatar_mudanca_posicao, formatar_variacao
 
-# Paleta preto e branco (classificação e palpites)
-PAL_FUNDO = (0, 0, 0)
-PAL_LINHA_PAR = (0, 0, 0)
-PAL_LINHA_IMPAR = (22, 22, 22)
-PAL_CABECALHO = (255, 255, 255)
-PAL_TEXTO_CAB = (0, 0, 0)
+# Paleta classificação (estilo planilha Excel THDFM)
+PAL_FUNDO = (18, 18, 18)
+PAL_LINHA_PAR = (24, 24, 24)
+PAL_LINHA_IMPAR = (18, 18, 18)
+PAL_CABECALHO = (42, 42, 42)
+PAL_TEXTO_CAB = (255, 255, 255)
 PAL_TEXTO = (255, 255, 255)
 PAL_TEXTO_SUAVE = (170, 170, 170)
 PAL_DESTAQUE = (255, 255, 255)
-PAL_SECUNDARIO = (120, 120, 120)
-PAL_POSITIVO = (255, 255, 255)
-PAL_NEGATIVO = (120, 120, 120)
+PAL_SECUNDARIO = (140, 140, 140)
+PAL_POSITIVO = (120, 220, 140)
+PAL_NEGATIVO = (220, 120, 120)
 PAL_SETA_SUBIU = (74, 222, 128)
 PAL_SETA_DESCEU = (248, 113, 113)
+PAL_TITULO_LARANJA = (237, 125, 49)
+PAL_BORDA = (55, 55, 55)
+PAL_LINHA_LIDER = (58, 48, 14)
+PAL_ZONA_LIDER = (184, 134, 11)
+PAL_TEXTO_LIDER = (255, 232, 160)
 
-MARGEM = 32
-ALTURA_LINHA = 36
-ALTURA_CABECALHO = 64
-ALTURA_SUBTITULO = 36
-ALTURA_TITULO_TABELA = 40
+# Zonas na coluna Pos (igual à planilha: 1-6, 7-13, 14-20, 21+)
+PAL_ZONA_AZUL = (31, 78, 121)
+PAL_ZONA_VERDE = (56, 118, 29)
+PAL_ZONA_NEUTRA = (48, 48, 48)
+PAL_ZONA_VERMELHA = (192, 80, 77)
+ZONA_AZUL_ATE = 6
+ZONA_VERDE_ATE = 13
+ZONA_NEUTRA_ATE = 20
+
+MARGEM = 24
+ALTURA_LINHA = 34
+ALTURA_TITULO_TABELA = 38
+ALTURA_RODAPE = 34
 LARGURA_COL_POS = 76
 LARGURA_COL_PONTO = 44
 LARGURA_COL_SOMA = 46
@@ -112,24 +125,49 @@ def _largura_nome(classificacao: list[ClassificacaoLinha], fonte) -> int:
     return min(largura, 340)
 
 
+def _cor_fundo_zona_posicao(posicao: int) -> tuple[int, int, int]:
+    if posicao == 1:
+        return PAL_ZONA_LIDER
+    if posicao <= ZONA_AZUL_ATE:
+        return PAL_ZONA_AZUL
+    if posicao <= ZONA_VERDE_ATE:
+        return PAL_ZONA_VERDE
+    if posicao <= ZONA_NEUTRA_ATE:
+        return PAL_ZONA_NEUTRA
+    return PAL_ZONA_VERMELHA
+
+
 def _desenhar_coluna_posicao(
     draw,
     x_col: int,
-    centro_y: int,
+    y_linha: int,
+    altura_linha: int,
     posicao: int,
     delta_pos: int | None,
     *,
     fontes: dict,
-    cor_pos: tuple[int, int, int],
 ) -> None:
+    fundo = _cor_fundo_zona_posicao(posicao)
+    draw.rectangle(
+        (x_col, y_linha, x_col + LARGURA_COL_POS, y_linha + altura_linha),
+        fill=fundo,
+    )
+    draw.line(
+        (x_col + LARGURA_COL_POS, y_linha, x_col + LARGURA_COL_POS, y_linha + altura_linha),
+        fill=PAL_BORDA,
+        width=1,
+    )
+
     centro_x = x_col + LARGURA_COL_POS // 2
+    centro_y = y_linha + altura_linha // 2
+    cor_numero = (28, 20, 0) if posicao == 1 else PAL_TEXTO
     texto_mudanca = formatar_mudanca_posicao(delta_pos)
     if not texto_mudanca:
         draw.text(
             (centro_x, centro_y),
             str(posicao),
             font=fontes["linha"],
-            fill=cor_pos,
+            fill=cor_numero,
             anchor="mm",
         )
         return
@@ -145,7 +183,7 @@ def _desenhar_coluna_posicao(
         (x_inicio, centro_y),
         texto_pos,
         font=fontes["linha"],
-        fill=cor_pos,
+        fill=cor_numero,
         anchor="lm",
     )
     if delta_pos is not None and delta_pos > 0:
@@ -208,10 +246,11 @@ def renderizar_classificacao_png(
 
     altura = (
         MARGEM
-        + ALTURA_SUBTITULO
         + linhas_jogos * 22
+        + (4 if linhas_jogos else 0)
         + ALTURA_TITULO_TABELA
         + ALTURA_LINHA * len(classificacao)
+        + ALTURA_RODAPE
         + MARGEM
     )
 
@@ -219,14 +258,6 @@ def renderizar_classificacao_png(
     draw = ImageDraw.Draw(imagem)
 
     y = MARGEM
-    draw.text(
-        (MARGEM, y),
-        f"Atualizada apos {jogos_realizados} de {total_jogos} jogos",
-        font=fontes["sub"],
-        fill=PAL_TEXTO_SUAVE,
-    )
-    y += ALTURA_SUBTITULO
-
     if jogos_novos:
         for texto in jogos_novos[:3]:
             draw.text((MARGEM, y), texto, font=fontes["sub"], fill=PAL_TEXTO_SUAVE)
@@ -279,30 +310,35 @@ def renderizar_classificacao_png(
     y += ALTURA_TITULO_TABELA
 
     for indice, linha in enumerate(classificacao):
-        cor = PAL_LINHA_PAR if indice % 2 == 0 else PAL_LINHA_IMPAR
+        eh_lider = linha.posicao == 1
+        if eh_lider:
+            cor = PAL_LINHA_LIDER
+        else:
+            cor = PAL_LINHA_PAR if indice % 2 == 0 else PAL_LINHA_IMPAR
         draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_LINHA), fill=cor)
+        draw.line((MARGEM, y + ALTURA_LINHA, largura - MARGEM, y + ALTURA_LINHA), fill=PAL_BORDA, width=1)
 
         chave = linha.participante.strip()
         variacao = variacoes.get(chave)
         texto_var = formatar_variacao(variacao)
         delta_pos = mudancas_posicao.get(chave)
+        cor_texto = PAL_TEXTO_LIDER if eh_lider else PAL_TEXTO
 
-        cor_pos = PAL_DESTAQUE if linha.posicao <= 3 else PAL_TEXTO
         centro_y = y + ALTURA_LINHA // 2
         _desenhar_coluna_posicao(
             draw,
             x_pos,
-            centro_y,
+            y,
+            ALTURA_LINHA,
             linha.posicao,
             delta_pos,
             fontes=fontes,
-            cor_pos=cor_pos,
         )
         draw.text(
             (x_nome + PADDING_NOME, centro_y),
             chave,
             font=fontes["linha"],
-            fill=PAL_TEXTO,
+            fill=cor_texto,
             anchor="lm",
         )
         for (_, campo), x_col in zip(_COLUNAS_PONTOS, layout["pontos"], strict=True):
@@ -311,14 +347,14 @@ def renderizar_classificacao_png(
                 (x_col + LARGURA_COL_PONTO // 2, centro_y),
                 str(valor),
                 font=fontes["linha"],
-                fill=PAL_TEXTO,
+                fill=cor_texto,
                 anchor="mm",
             )
         draw.text(
             (x_soma + LARGURA_COL_SOMA // 2, centro_y),
             str(linha.soma),
             font=fontes["linha"],
-            fill=PAL_DESTAQUE,
+            fill=cor_texto,
             anchor="mm",
         )
 
@@ -339,6 +375,15 @@ def renderizar_classificacao_png(
             anchor="mm",
         )
         y += ALTURA_LINHA
+
+    draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_RODAPE), fill=PAL_FUNDO)
+    draw.text(
+        (MARGEM + 8, y + ALTURA_RODAPE // 2),
+        "Placar vale 3, Vencedor vale 2, Gols Casa/Fora vale 1",
+        font=fontes["sub"],
+        fill=PAL_TEXTO_SUAVE,
+        anchor="lm",
+    )
 
     return imagem
 
