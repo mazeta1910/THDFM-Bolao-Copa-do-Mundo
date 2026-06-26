@@ -193,6 +193,7 @@ def _imprimir_cabecalho() -> None:
     print(" 11. Validar bolao")
     print(" 12. Conferir com referencia do Excel")
     print(" 13. Importar classificacao do Excel")
+    print(" 14. Ranking classificacao dos grupos (parcial)")
     print()
     print("  0. Sair")
 
@@ -207,6 +208,7 @@ def executar_menu() -> int:
         cmd_importar_referencia,
         cmd_palpites,
         cmd_proximos,
+        cmd_ranking_grupos,
         cmd_resultado,
         cmd_validar,
     )
@@ -355,6 +357,8 @@ def executar_menu() -> int:
                 if not caminho:
                     caminho = "data/BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv"
                 cmd_importar_referencia(_namespace(arquivo=caminho))
+            elif escolha == "14":
+                cmd_ranking_grupos(_namespace(reais=None, palpites=None, detalhe=False, sem_arquivo=False))
             else:
                 print("Opcao invalida.")
         except ValueError as exc:

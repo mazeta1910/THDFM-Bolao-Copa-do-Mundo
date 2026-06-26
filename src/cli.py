@@ -66,6 +66,11 @@ CLASSIFICACAO_TXT = DATA_DIR / "classificacao_grupo.txt"
 CLASSIFICACAO_PNG = DATA_DIR / "classificacao_grupo.png"
 SNAPSHOT_JSON = DATA_DIR / "classificacao_snapshot.json"
 REFERENCIA_CSV = DATA_DIR / "classificacao_referencia.csv"
+CLASSIFICACOES_REAIS_CSV = DATA_DIR / "Planilha Classificações Reais.csv"
+PALPITES_PRIMEIRA_FASE_CSV = (
+    DATA_DIR / "BOLÃO THDFM WC26 - RESPOSTAS PRIMEIRA FASE E CRAVADURA.csv"
+)
+RANKING_GRUPOS_TXT = DATA_DIR / "ranking_grupos.txt"
 
 _ARQUIVOS_IGNORADOS = {
     "resultados.csv",
@@ -360,6 +365,26 @@ def cmd_classificar(args: argparse.Namespace) -> int:
     bolao = carregar_bolao()
     classificacao = _classificacao_programa(bolao)
     _imprimir_classificacao(classificacao)
+    return 0
+
+
+def cmd_ranking_grupos(args: argparse.Namespace) -> int:
+    from src.grupos_ranking import formatar_ranking_grupos, gerar_ranking_grupos
+
+    reais_path = Path(args.reais) if args.reais else CLASSIFICACOES_REAIS_CSV
+    palpites_path = Path(args.palpites) if args.palpites else PALPITES_PRIMEIRA_FASE_CSV
+    if not reais_path.exists():
+        raise FileNotFoundError(f"Classificacoes reais nao encontradas: {reais_path}")
+    if not palpites_path.exists():
+        raise FileNotFoundError(f"Palpites da primeira fase nao encontrados: {palpites_path}")
+
+    ranking, resumo = gerar_ranking_grupos(reais_path, palpites_path)
+    texto = formatar_ranking_grupos(ranking, resumo, detalhe=args.detalhe)
+    print(texto)
+
+    if not args.sem_arquivo:
+        RANKING_GRUPOS_TXT.write_text(texto + "\n", encoding="utf-8")
+        print(f"\nTexto salvo em {RANKING_GRUPOS_TXT}")
     return 0
 
 
@@ -734,6 +759,30 @@ def main(argv: list[str] | None = None) -> int:
 
     p_classificar = subparsers.add_parser("classificar", help="Exibe classificação")
     p_classificar.set_defaults(func=cmd_classificar)
+
+    p_ranking_grupos = subparsers.add_parser(
+        "ranking-grupos",
+        help="Ranking parcial da classificacao dos grupos (10 pts por time cravado)",
+    )
+    p_ranking_grupos.add_argument(
+        "--reais",
+        help="CSV com classificacoes reais por grupo",
+    )
+    p_ranking_grupos.add_argument(
+        "--palpites",
+        help="CSV de respostas da primeira fase (palpites de grupos)",
+    )
+    p_ranking_grupos.add_argument(
+        "--detalhe",
+        action="store_true",
+        help="Mostra pontos por grupo na mesma linha",
+    )
+    p_ranking_grupos.add_argument(
+        "--sem-arquivo",
+        action="store_true",
+        help="Nao salva ranking_grupos.txt",
+    )
+    p_ranking_grupos.set_defaults(func=cmd_ranking_grupos)
 
     p_exportar = subparsers.add_parser("exportar", help="Exporta classificação para CSV")
     p_exportar.set_defaults(func=cmd_exportar)

@@ -66,6 +66,7 @@ BANDEIRAS_ESPECIAIS: dict[str, str] = {
 # Variantes de grafia usadas na planilha (apos _normalizar).
 ALIASES_TIMES: dict[str, str] = {
     "Curacau": "Curacao",
+    "Paises Baixos": "Holanda",
 }
 
 
