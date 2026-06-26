@@ -27,9 +27,17 @@ ALTURA_CABECALHO = 64
 ALTURA_SUBTITULO = 36
 ALTURA_TITULO_TABELA = 40
 LARGURA_COL_POS = 76
-LARGURA_COL_PTS = 56
-LARGURA_COL_VAR = 64
+LARGURA_COL_PONTO = 44
+LARGURA_COL_SOMA = 46
+LARGURA_COL_VAR = 52
 PADDING_NOME = 16
+
+_COLUNAS_PONTOS = (
+    ("Placar", "placar"),
+    ("Venc.", "vencedor"),
+    ("G.casa", "gols_casa"),
+    ("G.fora", "gols_fora"),
+)
 
 
 def _carregar_fontes():
@@ -72,6 +80,24 @@ def _carregar_fontes():
         "var": fonte(True, tamanhos["var"]),
         "confronto": fonte(False, 16),
     }
+
+
+def _layout_classificacao(largura_nome: int) -> dict[str, int]:
+    x = MARGEM
+    layout = {"pos": x}
+    x += LARGURA_COL_POS
+    layout["nome"] = x
+    x += largura_nome
+    layout["pontos"] = []
+    for _ in _COLUNAS_PONTOS:
+        layout["pontos"].append(x)
+        x += LARGURA_COL_PONTO
+    layout["soma"] = x
+    x += LARGURA_COL_SOMA
+    layout["rod"] = x
+    x += LARGURA_COL_VAR
+    layout["largura_total"] = x + MARGEM
+    return layout
 
 
 def _largura_nome(classificacao: list[ClassificacaoLinha], fonte) -> int:
@@ -173,13 +199,8 @@ def renderizar_classificacao_png(
 
     fontes = _carregar_fontes()
     largura_nome = _largura_nome(classificacao, fontes["linha"])
-    largura = (
-        MARGEM * 2
-        + LARGURA_COL_POS
-        + largura_nome
-        + LARGURA_COL_PTS
-        + LARGURA_COL_VAR
-    )
+    layout = _layout_classificacao(largura_nome)
+    largura = layout["largura_total"]
 
     linhas_jogos = 0
     if jogos_novos:
@@ -212,19 +233,49 @@ def renderizar_classificacao_png(
             y += 22
         y += 4
 
-    x_pos = MARGEM
-    x_nome = x_pos + LARGURA_COL_POS
-    x_pts = x_nome + largura_nome
-    x_var = x_pts + LARGURA_COL_PTS
+    x_pos = layout["pos"]
+    x_nome = layout["nome"]
+    x_soma = layout["soma"]
+    x_rod = layout["rod"]
+    centro_cab = y + ALTURA_TITULO_TABELA // 2
 
     draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_TITULO_TABELA), fill=PAL_CABECALHO)
-    for texto, x, ancora in [
-        ("Pos", x_pos + LARGURA_COL_POS // 2, "mm"),
-        ("Participante", x_nome + PADDING_NOME, "lm"),
-        ("Pts", x_pts + LARGURA_COL_PTS // 2, "mm"),
-        ("Rodada", x_var + LARGURA_COL_VAR // 2, "mm"),
-    ]:
-        draw.text((x, y + ALTURA_TITULO_TABELA // 2), texto, font=fontes["cab"], fill=PAL_TEXTO_CAB, anchor=ancora)
+    draw.text(
+        (x_pos + LARGURA_COL_POS // 2, centro_cab),
+        "Pos",
+        font=fontes["cab"],
+        fill=PAL_TEXTO_CAB,
+        anchor="mm",
+    )
+    draw.text(
+        (x_nome + PADDING_NOME, centro_cab),
+        "Participante",
+        font=fontes["cab"],
+        fill=PAL_TEXTO_CAB,
+        anchor="lm",
+    )
+    for (rotulo, _), x_col in zip(_COLUNAS_PONTOS, layout["pontos"], strict=True):
+        draw.text(
+            (x_col + LARGURA_COL_PONTO // 2, centro_cab),
+            rotulo,
+            font=fontes["cab"],
+            fill=PAL_TEXTO_CAB,
+            anchor="mm",
+        )
+    draw.text(
+        (x_soma + LARGURA_COL_SOMA // 2, centro_cab),
+        "Pts",
+        font=fontes["cab"],
+        fill=PAL_TEXTO_CAB,
+        anchor="mm",
+    )
+    draw.text(
+        (x_rod + LARGURA_COL_VAR // 2, centro_cab),
+        "Rod",
+        font=fontes["cab"],
+        fill=PAL_TEXTO_CAB,
+        anchor="mm",
+    )
     y += ALTURA_TITULO_TABELA
 
     for indice, linha in enumerate(classificacao):
@@ -248,17 +299,26 @@ def renderizar_classificacao_png(
             cor_pos=cor_pos,
         )
         draw.text(
-            (x_nome + PADDING_NOME, y + ALTURA_LINHA // 2),
+            (x_nome + PADDING_NOME, centro_y),
             chave,
             font=fontes["linha"],
             fill=PAL_TEXTO,
             anchor="lm",
         )
+        for (_, campo), x_col in zip(_COLUNAS_PONTOS, layout["pontos"], strict=True):
+            valor = getattr(linha, campo)
+            draw.text(
+                (x_col + LARGURA_COL_PONTO // 2, centro_y),
+                str(valor),
+                font=fontes["linha"],
+                fill=PAL_TEXTO,
+                anchor="mm",
+            )
         draw.text(
-            (x_pts + LARGURA_COL_PTS // 2, y + ALTURA_LINHA // 2),
+            (x_soma + LARGURA_COL_SOMA // 2, centro_y),
             str(linha.soma),
             font=fontes["linha"],
-            fill=PAL_TEXTO,
+            fill=PAL_DESTAQUE,
             anchor="mm",
         )
 
@@ -272,7 +332,7 @@ def renderizar_classificacao_png(
             cor_var = PAL_SECUNDARIO
 
         draw.text(
-            (x_var + LARGURA_COL_VAR // 2, y + ALTURA_LINHA // 2),
+            (x_rod + LARGURA_COL_VAR // 2, centro_y),
             texto_var,
             font=fontes["var"],
             fill=cor_var,
