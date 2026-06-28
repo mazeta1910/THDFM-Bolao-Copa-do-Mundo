@@ -4,7 +4,11 @@ from dataclasses import dataclass
 
 from src.models import BolaoData, Jogo, Palpite
 from src.penaltis import nome_vencedor_jogo
-from src.scoring import classificar_palpite, pontos_jogo
+from src.scoring import FASE_GRUPOS_MAX, classificar_palpite, pontos_jogo
+
+
+def _jogo_mata_mata(jogo: Jogo) -> bool:
+    return jogo.id > FASE_GRUPOS_MAX
 
 
 @dataclass
@@ -15,10 +19,17 @@ class PalpiteLinha:
     pontos: int | None = None
     categoria: str | None = None
     acertou_vencedor: bool | None = None
+    vencedor_penaltis: str | None = None
 
     @property
     def placar_texto(self) -> str:
         return f"{self.palpite_casa}x{self.palpite_fora}"
+
+    @property
+    def penaltis_texto(self) -> str:
+        if self.palpite_casa != self.palpite_fora:
+            return "-"
+        return self.vencedor_penaltis or "-"
 
     @property
     def texto_vencedor(self) -> str | None:
@@ -67,6 +78,7 @@ def _preencher_linha_palpite(jogo: Jogo, palpite: Palpite) -> PalpiteLinha:
         pontos=pontos,
         categoria=categoria,
         acertou_vencedor=acertou_vencedor,
+        vencedor_penaltis=palpite.vencedor_penaltis,
     )
 
 
@@ -113,7 +125,10 @@ def _titulo_jogo(jogo: Jogo) -> str:
 def _resultado_jogo(jogo: Jogo) -> str | None:
     if not jogo.realizado:
         return None
-    return f"Resultado: {jogo.gols_casa}x{jogo.gols_fora}"
+    texto = f"Resultado: {jogo.gols_casa}x{jogo.gols_fora}"
+    if jogo.vencedor_penaltis:
+        texto += f" (pen. {jogo.vencedor_penaltis.strip()})"
+    return texto
 
 
 def formatar_palpites_texto(blocos: list[PalpitesPorJogo]) -> str:
@@ -130,12 +145,32 @@ def formatar_palpites_texto(blocos: list[PalpitesPorJogo]) -> str:
         linhas.append("")
 
         if mostrar_pontos:
-            linhas.append(f"{'Participante':<28} {'Palpite':>7}  {'Pts':>3}")
-            linhas.append("-" * 42)
-            for linha in bloco.linhas:
-                pts = "-" if linha.pontos is None else str(linha.pontos)
+            if _jogo_mata_mata(bloco.jogo):
                 linhas.append(
-                    f"{linha.participante.strip():<28} {linha.placar_texto:>7}  {pts:>3}"
+                    f"{'Participante':<28} {'Palpite':>7}  {'Pen.':<14}  {'Pts':>3}"
+                )
+                linhas.append("-" * 58)
+                for linha in bloco.linhas:
+                    pts = "-" if linha.pontos is None else str(linha.pontos)
+                    linhas.append(
+                        f"{linha.participante.strip():<28} {linha.placar_texto:>7}  "
+                        f"{linha.penaltis_texto:<14}  {pts:>3}"
+                    )
+            else:
+                linhas.append(f"{'Participante':<28} {'Palpite':>7}  {'Pts':>3}")
+                linhas.append("-" * 42)
+                for linha in bloco.linhas:
+                    pts = "-" if linha.pontos is None else str(linha.pontos)
+                    linhas.append(
+                        f"{linha.participante.strip():<28} {linha.placar_texto:>7}  {pts:>3}"
+                    )
+        elif _jogo_mata_mata(bloco.jogo):
+            linhas.append(f"{'Participante':<28} {'Palpite':>7}  {'Pen.':<14}")
+            linhas.append("-" * 52)
+            for linha in bloco.linhas:
+                linhas.append(
+                    f"{linha.participante.strip():<28} {linha.placar_texto:>7}  "
+                    f"{linha.penaltis_texto:<14}"
                 )
         else:
             linhas.append(f"{'Participante':<28} {'Palpite':>7}")

@@ -616,8 +616,15 @@ ALTURA_BLOCO_JOGO = 24
 ESPACO_ENTRE_COLUNAS = 16
 LARGURA_NOME_COL = 200
 LARGURA_COL_PALPITE = 80
+LARGURA_COL_PEN_PALPITE = 88
 LARGURA_COL_PTS_PALPITE = 40
 LARGURA_MIN_JOGO = 108
+
+
+def _jogo_mata_mata_palpites(jogo) -> bool:
+    from src.scoring import FASE_GRUPOS_MAX
+
+    return jogo.id > FASE_GRUPOS_MAX
 
 
 def _mapa_palpites_por_nome(bloco) -> dict[str, object]:
@@ -643,6 +650,8 @@ def _largura_coluna_jogo(bloco, fontes: dict | None = None) -> int:
     from src.bandeiras_img import largura_confronto
 
     largura = LARGURA_COL_PALPITE
+    if _jogo_mata_mata_palpites(bloco.jogo):
+        largura += LARGURA_COL_PEN_PALPITE
     if bloco.jogo.realizado:
         largura += LARGURA_COL_PTS_PALPITE
 
@@ -652,6 +661,8 @@ def _largura_coluna_jogo(bloco, fontes: dict | None = None) -> int:
         draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
         largura_bandeiras = largura_confronto(fontes["confronto"])
         largura_rotulo = int(draw.textlength("Palpite", font=fontes["cab"])) + 16
+        if _jogo_mata_mata_palpites(bloco.jogo):
+            largura_rotulo += LARGURA_COL_PEN_PALPITE
         largura = max(largura, largura_bandeiras, largura_rotulo, LARGURA_MIN_JOGO)
 
     return largura
@@ -664,15 +675,28 @@ def _encurtar_texto(draw, texto: str, fonte, largura_max: int) -> str:
     return resultado
 
 
-def _centros_coluna_jogo(x_atual: int, largura_col: int, realizado: bool) -> tuple[int, int | None]:
-    centro = x_atual + largura_col // 2
-    if not realizado:
-        return centro, None
-    largura_bloco = LARGURA_COL_PALPITE + LARGURA_COL_PTS_PALPITE
+def _centros_coluna_jogo(
+    x_atual: int,
+    largura_col: int,
+    jogo,
+) -> tuple[int, int | None, int | None]:
+    tem_pen = _jogo_mata_mata_palpites(jogo)
+    realizado = jogo.realizado
+    largura_bloco = LARGURA_COL_PALPITE
+    if tem_pen:
+        largura_bloco += LARGURA_COL_PEN_PALPITE
+    if realizado:
+        largura_bloco += LARGURA_COL_PTS_PALPITE
     x_bloco = x_atual + (largura_col - largura_bloco) // 2
     x_pal = x_bloco + LARGURA_COL_PALPITE // 2
-    x_pts = x_bloco + LARGURA_COL_PALPITE + LARGURA_COL_PTS_PALPITE // 2
-    return x_pal, x_pts
+    x_pen = None
+    if tem_pen:
+        x_pen = x_bloco + LARGURA_COL_PALPITE + LARGURA_COL_PEN_PALPITE // 2
+    x_pts = None
+    if realizado:
+        offset_pts = LARGURA_COL_PALPITE + (LARGURA_COL_PEN_PALPITE if tem_pen else 0)
+        x_pts = x_bloco + offset_pts + LARGURA_COL_PTS_PALPITE // 2
+    return x_pal, x_pen, x_pts
 
 
 def exportar_palpites_png(blocos, path: str | Path) -> None:
@@ -749,7 +773,7 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
 
     x_atual = x_jogos
     for bloco, largura_col in zip(blocos, larguras_jogos):
-        x_pal, x_pts = _centros_coluna_jogo(x_atual, largura_col, bloco.jogo.realizado)
+        x_pal, x_pen, x_pts = _centros_coluna_jogo(x_atual, largura_col, bloco.jogo)
         draw.text(
             (x_pal, y + ALTURA_TITULO_TABELA // 2),
             "Palpite",
@@ -757,6 +781,14 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
             fill=PAL_TEXTO_CAB,
             anchor="mm",
         )
+        if x_pen is not None:
+            draw.text(
+                (x_pen, y + ALTURA_TITULO_TABELA // 2),
+                "Pen.",
+                font=fontes["cab"],
+                fill=PAL_TEXTO_CAB,
+                anchor="mm",
+            )
         if x_pts is not None:
             draw.text(
                 (x_pts, y + ALTURA_TITULO_TABELA // 2),
@@ -789,7 +821,7 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
         for bloco, mapa, largura_col in zip(blocos, mapas, larguras_jogos):
             linha = mapa[nome]
             jogo = bloco.jogo
-            x_pal, x_pts = _centros_coluna_jogo(x_atual, largura_col, jogo.realizado)
+            x_pal, x_pen, x_pts = _centros_coluna_jogo(x_atual, largura_col, jogo)
 
             placar_exato = (
                 jogo.realizado
@@ -804,6 +836,28 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
                 fill=cor_palpite,
                 anchor="mm",
             )
+
+            if x_pen is not None:
+                mostrar_pen = linha.palpite_casa == linha.palpite_fora
+                pen_texto = (
+                    _encurtar_texto(
+                        draw,
+                        linha.penaltis_texto,
+                        fontes["linha"],
+                        LARGURA_COL_PEN_PALPITE - 8,
+                    )
+                    if mostrar_pen
+                    else "-"
+                )
+                draw.text(
+                    (x_pen, y + ALTURA_LINHA // 2),
+                    pen_texto,
+                    font=fontes["linha"],
+                    fill=PAL_TEXTO_SUAVE
+                    if mostrar_pen and linha.vencedor_penaltis
+                    else PAL_SECUNDARIO,
+                    anchor="mm",
+                )
 
             if x_pts is not None:
                 pontos = "-" if linha.pontos is None else str(linha.pontos)

@@ -2,7 +2,9 @@ import unittest
 from pathlib import Path
 
 from src.loader import aplicar_resultados_externos
+from src.models import BolaoData, Jogo, Palpite
 from src.palpites_view import (
+    _jogo_mata_mata,
     _mapas_palpites_provisorio,
     _total_pontos_provisorio,
     formatar_palpites_provisorio_texto,
@@ -111,6 +113,29 @@ class TestPalpitesView(unittest.TestCase):
     def test_jogo_inexistente(self):
         with self.assertRaises(ValueError):
             listar_palpites_jogos(self.bolao, [999])
+
+    def test_penaltis_no_texto_mata_mata(self):
+        jogo = Jogo(
+            id=73,
+            data="28 DE JUNHO",
+            casa="Canadá",
+            fora="África do Sul",
+            gols_casa=0,
+            gols_fora=0,
+        )
+        palpites = [
+            Palpite("Ana", 73, 0, 0, vencedor_penaltis="Canadá"),
+            Palpite("Bob", 73, 1, 0),
+        ]
+        bolao = BolaoData(jogos=[jogo], participantes=["Ana", "Bob"], palpites=palpites)
+        blocos = listar_palpites_jogos(bolao, [73])
+        texto = formatar_palpites_texto(blocos)
+        self.assertTrue(_jogo_mata_mata(jogo))
+        self.assertIn("Pen.", texto)
+        self.assertIn("Canadá", texto)
+        self.assertIn("Ana", texto)
+        linha_bob = next(l for l in blocos[0].linhas if l.participante == "Bob")
+        self.assertEqual(linha_bob.penaltis_texto, "-")
 
 
 if __name__ == "__main__":
