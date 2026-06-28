@@ -56,13 +56,18 @@ def _ler_jogo_para_placar() -> tuple[int, object] | None:
 
 
 def _ler_placar_jogo(jogo) -> str | None:
+    from src.scoring import FASE_GRUPOS_MAX
+
     if jogo.realizado:
-        print(
-            f"  Placar atual: {jogo.gols_casa}x{jogo.gols_fora} "
-            "(sera substituido se informar outro)"
-        )
+        placar = f"{jogo.gols_casa}x{jogo.gols_fora}"
+        if jogo.vencedor_penaltis:
+            placar += f" (penaltis: {jogo.vencedor_penaltis})"
+        print(f"  Placar atual: {placar} (sera substitido se informar outro)")
+    dica = ""
+    if jogo.id > FASE_GRUPOS_MAX:
+        dica = " [empate: Enter=parcial | time=penaltis]"
     return _ler_linha(
-        f"Placar Jogo {jogo.id} ({jogo.casa} x {jogo.fora}) "
+        f"Placar Jogo {jogo.id} ({jogo.casa} x {jogo.fora}){dica} "
         f"[Enter/sair cancela]: "
     )
 
@@ -120,9 +125,12 @@ def _imprimir_ultimos_com_placar(bolao, *, limite: int = 2, titulo: str | None =
         )
     print(titulo + ":")
     for jogo in com_placar_lista[-limite:]:
+        placar = f"{jogo.gols_casa}x{jogo.gols_fora}"
+        if jogo.vencedor_penaltis:
+            placar += f" (pen. {jogo.vencedor_penaltis})"
         print(
             f"  Jogo {jogo.id}: {jogo.casa} x {jogo.fora}  "
-            f"-> {jogo.gols_casa}x{jogo.gols_fora}  ({jogo.data})"
+            f"-> {placar}  ({jogo.data})"
         )
 
 
@@ -194,7 +202,9 @@ def _imprimir_cabecalho() -> None:
     print(" 12. Conferir com referencia do Excel")
     print(" 13. Importar classificacao do Excel")
     print(" 14. Ranking classificacao dos grupos (parcial)")
+    print(" 15. Pontuacao parcial por fase (detalhada)")
     print()
+    print("Exports atuais: data/ultimo/ (veja manifest.txt)")
     print("  0. Sair")
 
 
@@ -211,6 +221,7 @@ def executar_menu() -> int:
         cmd_ranking_grupos,
         cmd_resultado,
         cmd_validar,
+        cmd_fase,
     )
 
     _configurar_stdio()
@@ -290,13 +301,24 @@ def executar_menu() -> int:
                         placar=placar,
                         remover=False,
                         interativo=False,
+                        penaltis=None,
+                        perguntar_penaltis=True,
+                        provisorio=False,
                     )
                 )
             elif escolha == "4":
                 _imprimir_contexto_jogos(pendentes=True, limite_com_placar=6)
                 print("Enter pula o jogo; 'sair' encerra sem perder o que ja foi lancado.\n")
                 cmd_resultado(
-                    _namespace(jogo=None, placar=None, remover=False, interativo=True)
+                    _namespace(
+                        jogo=None,
+                        placar=None,
+                        remover=False,
+                        interativo=True,
+                        penaltis=None,
+                        perguntar_penaltis=False,
+                        provisorio=False,
+                    )
                 )
             elif escolha == "5":
                 _imprimir_contexto_jogos(com_placar=True)
@@ -304,7 +326,10 @@ def executar_menu() -> int:
                 if not jogos:
                     _pausar()
                     continue
-                cmd_resultado(_namespace(jogo=jogos, placar=None, remover=True, interativo=False))
+                cmd_resultado(_namespace(
+                    jogo=jogos, placar=None, remover=True, interativo=False,
+                    penaltis=None, perguntar_penaltis=False, provisorio=False,
+                ))
             elif escolha == "6":
                 cmd_proximos(_namespace(limite=None))
             elif escolha == "7":
@@ -359,6 +384,15 @@ def executar_menu() -> int:
                 cmd_importar_referencia(_namespace(arquivo=caminho))
             elif escolha == "14":
                 cmd_ranking_grupos(_namespace(reais=None, palpites=None, detalhe=False, sem_arquivo=False))
+            elif escolha == "15":
+                print("\nFases: grupos | 32avos | oitavas | quartas | semis | finais")
+                fase = _ler_linha("Fase [32avos]: ")
+                if _texto_cancelado(fase):
+                    print("Cancelado.")
+                    continue
+                if not fase:
+                    fase = "32avos"
+                cmd_fase(_namespace(fase=fase, sem_arquivo=False, sem_png=False))
             else:
                 print("Opcao invalida.")
         except ValueError as exc:

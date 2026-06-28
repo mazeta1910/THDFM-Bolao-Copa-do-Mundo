@@ -122,6 +122,14 @@ def calcular_pontos_participante(
     return pontos_total, acertos_total, por_grupo
 
 
+def pontos_grupos_por_participante(
+    reais_path: str | Path,
+    palpites_path: str | Path,
+) -> dict[str, int]:
+    ranking, _ = gerar_ranking_grupos(reais_path, palpites_path)
+    return {item.participante.strip(): item.pontos for item in ranking}
+
+
 def gerar_ranking_grupos(
     reais_path: str | Path,
     palpites_path: str | Path,
@@ -186,7 +194,7 @@ def formatar_ranking_grupos(
         [
             "",
             "Regra: 10 pts por time na posicao correta (max. 40 por grupo, 480 no total).",
-            "Ranking separado da classificacao dos 72 jogos.",
+            "Entra na classificacao A (palpitadura), separada dos jogos (premiacao B).",
         ]
     )
     return "\n".join(linhas)

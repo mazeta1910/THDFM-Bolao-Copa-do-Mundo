@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.models import BolaoData, Jogo
-from src.scoring import classificar_palpite, pontos_jogo, vencedor
+from src.models import BolaoData, Jogo, Palpite
+from src.penaltis import nome_vencedor_jogo
+from src.scoring import classificar_palpite, pontos_jogo
 
 
 @dataclass
@@ -32,7 +33,7 @@ class PalpitesPorJogo:
     linhas: list[PalpiteLinha]
 
 
-def _preencher_linha_palpite(jogo: Jogo, palpite) -> PalpiteLinha:
+def _preencher_linha_palpite(jogo: Jogo, palpite: Palpite) -> PalpiteLinha:
     pontos = None
     categoria = None
     acertou_vencedor = None
@@ -42,12 +43,22 @@ def _preencher_linha_palpite(jogo: Jogo, palpite) -> PalpiteLinha:
             palpite.palpite_fora,
             jogo.gols_casa,
             jogo.gols_fora,
+            jogo_id=jogo.id,
+            time_casa=jogo.casa,
+            time_fora=jogo.fora,
+            palpite_penaltis=palpite.vencedor_penaltis,
+            real_penaltis=jogo.vencedor_penaltis,
         )
         pontos = pontos_jogo(
             palpite.palpite_casa,
             palpite.palpite_fora,
             jogo.gols_casa,
             jogo.gols_fora,
+            jogo_id=jogo.id,
+            time_casa=jogo.casa,
+            time_fora=jogo.fora,
+            palpite_penaltis=palpite.vencedor_penaltis,
+            real_penaltis=jogo.vencedor_penaltis,
         )
     return PalpiteLinha(
         participante=palpite.participante,
@@ -60,14 +71,7 @@ def _preencher_linha_palpite(jogo: Jogo, palpite) -> PalpiteLinha:
 
 
 def rotulo_vencedor_jogo(jogo: Jogo) -> str:
-    if not jogo.realizado:
-        return "-"
-    resultado = vencedor(jogo.gols_casa, jogo.gols_fora)
-    if resultado == "empate":
-        return "Empate"
-    if resultado == "casa":
-        return jogo.casa.strip()
-    return jogo.fora.strip()
+    return nome_vencedor_jogo(jogo)
 
 
 def _ordenar_linhas(jogo: Jogo, linhas: list[PalpiteLinha]) -> list[PalpiteLinha]:

@@ -11,6 +11,7 @@ class Jogo:
     fora: str
     gols_casa: int | None = None
     gols_fora: int | None = None
+    vencedor_penaltis: str | None = None
 
     @property
     def realizado(self) -> bool:
@@ -23,6 +24,7 @@ class Palpite:
     jogo_id: int
     palpite_casa: int
     palpite_fora: int
+    vencedor_penaltis: str | None = None
 
 
 @dataclass
@@ -44,10 +46,15 @@ class PontosParticipante:
     vencedor: int = 0
     gols_casa: int = 0
     gols_fora: int = 0
+    grupos: int = 0
 
     @property
     def soma(self) -> int:
         return self.placar + self.vencedor + self.gols_casa + self.gols_fora
+
+    @property
+    def soma_jogos(self) -> int:
+        return self.soma
 
     def adicionar(self, pontos: PontosJogo) -> None:
         self.placar += pontos.placar
@@ -64,6 +71,16 @@ class ClassificacaoLinha:
     vencedor: int
     gols_casa: int
     gols_fora: int
+    soma: int
+    grupos: int = 0
+
+
+@dataclass
+class ClassificacaoPremioLinha:
+    posicao: int
+    participante: str
+    grupos: int
+    cravadura: int
     soma: int
 
 

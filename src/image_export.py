@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.models import ClassificacaoLinha
+from src.models import ClassificacaoLinha, ClassificacaoPremioLinha
 from src.snapshot import formatar_mudanca_posicao, formatar_variacao
 
 # Paleta classificação (estilo planilha Excel THDFM)
@@ -40,16 +40,17 @@ ALTURA_LINHA = 34
 ALTURA_TITULO_TABELA = 38
 ALTURA_RODAPE = 34
 LARGURA_COL_POS = 76
-LARGURA_COL_PONTO = 44
+LARGURA_COL_PONTO = 52
 LARGURA_COL_SOMA = 46
 LARGURA_COL_VAR = 52
 PADDING_NOME = 16
+ESPACO_ENTRE_SECOES = 32
 
 _COLUNAS_PONTOS = (
     ("Placar", "placar"),
-    ("Venc.", "vencedor"),
-    ("G.casa", "gols_casa"),
-    ("G.fora", "gols_fora"),
+    ("Vencedor", "vencedor"),
+    ("Gols casa", "gols_casa"),
+    ("Gols fora", "gols_fora"),
 )
 
 
@@ -95,22 +96,65 @@ def _carregar_fontes():
     }
 
 
-def _layout_classificacao(largura_nome: int) -> dict[str, int]:
+def _layout_classificacao(
+    largura_nome: int,
+    *,
+    mostrar_rod: bool = True,
+    fonte_cab=None,
+) -> dict[str, int | list[int]]:
+    from PIL import Image, ImageDraw
+
     x = MARGEM
-    layout = {"pos": x}
+    layout: dict[str, int | list[int]] = {"pos": x}
     x += LARGURA_COL_POS
     layout["nome"] = x
     x += largura_nome
+
+    draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    larguras_pontos: list[int] = []
+    for rotulo, _ in _COLUNAS_PONTOS:
+        if fonte_cab is not None:
+            largura = int(draw.textlength(rotulo, font=fonte_cab)) + 16
+            larguras_pontos.append(max(LARGURA_COL_PONTO, largura))
+        else:
+            larguras_pontos.append(LARGURA_COL_PONTO)
+    layout["larguras_pontos"] = larguras_pontos
     layout["pontos"] = []
-    for _ in _COLUNAS_PONTOS:
+    for largura in larguras_pontos:
         layout["pontos"].append(x)
-        x += LARGURA_COL_PONTO
+        x += largura
     layout["soma"] = x
     x += LARGURA_COL_SOMA
-    layout["rod"] = x
-    x += LARGURA_COL_VAR
+    if mostrar_rod:
+        layout["rod"] = x
+        x += LARGURA_COL_VAR
     layout["largura_total"] = x + MARGEM
     return layout
+
+
+def exportar_classificacao_fase_png(
+    classificacao: list[ClassificacaoLinha],
+    path: str | Path,
+    *,
+    titulo: str,
+    rodape: str,
+    jogos_realizados: int,
+    total_jogos: int,
+) -> None:
+    imagem = renderizar_classificacao_png(
+        classificacao,
+        jogos_realizados=jogos_realizados,
+        total_jogos=total_jogos,
+        variacoes={linha.participante.strip(): None for linha in classificacao},
+        mudancas_posicao={linha.participante.strip(): None for linha in classificacao},
+        titulo=titulo,
+        rodape=rodape,
+        mostrar_rod=False,
+        rotulo_soma="Soma",
+    )
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    imagem.save(path, format="PNG")
 
 
 def _largura_nome(classificacao: list[ClassificacaoLinha], fonte) -> int:
@@ -232,13 +276,18 @@ def renderizar_classificacao_png(
     variacoes: dict[str, int | None],
     mudancas_posicao: dict[str, int | None],
     jogos_novos: list[str] | None = None,
+    titulo: str = "B) RESULTADOS DOS JOGOS",
+    rodape: str | None = None,
+    mostrar_rod: bool = True,
+    rotulo_soma: str = "Pts",
 ):
     from PIL import Image, ImageDraw
 
     fontes = _carregar_fontes()
     largura_nome = _largura_nome(classificacao, fontes["linha"])
-    layout = _layout_classificacao(largura_nome)
+    layout = _layout_classificacao(largura_nome, mostrar_rod=mostrar_rod, fonte_cab=fontes["cab"])
     largura = layout["largura_total"]
+    larguras_pontos = layout["larguras_pontos"]
 
     linhas_jogos = 0
     if jogos_novos:
@@ -246,6 +295,7 @@ def renderizar_classificacao_png(
 
     altura = (
         MARGEM
+        + 28
         + linhas_jogos * 22
         + (4 if linhas_jogos else 0)
         + ALTURA_TITULO_TABELA
@@ -258,6 +308,13 @@ def renderizar_classificacao_png(
     draw = ImageDraw.Draw(imagem)
 
     y = MARGEM
+    draw.text(
+        (MARGEM, y),
+        titulo,
+        font=fontes["sub"],
+        fill=PAL_TITULO_LARANJA,
+    )
+    y += 28
     if jogos_novos:
         for texto in jogos_novos[:3]:
             draw.text((MARGEM, y), texto, font=fontes["sub"], fill=PAL_TEXTO_SUAVE)
@@ -267,7 +324,7 @@ def renderizar_classificacao_png(
     x_pos = layout["pos"]
     x_nome = layout["nome"]
     x_soma = layout["soma"]
-    x_rod = layout["rod"]
+    x_rod = layout.get("rod")
     centro_cab = y + ALTURA_TITULO_TABELA // 2
 
     draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_TITULO_TABELA), fill=PAL_CABECALHO)
@@ -285,9 +342,11 @@ def renderizar_classificacao_png(
         fill=PAL_TEXTO_CAB,
         anchor="lm",
     )
-    for (rotulo, _), x_col in zip(_COLUNAS_PONTOS, layout["pontos"], strict=True):
+    for (rotulo, _), x_col, largura_col in zip(
+        _COLUNAS_PONTOS, layout["pontos"], larguras_pontos, strict=True
+    ):
         draw.text(
-            (x_col + LARGURA_COL_PONTO // 2, centro_cab),
+            (x_col + largura_col // 2, centro_cab),
             rotulo,
             font=fontes["cab"],
             fill=PAL_TEXTO_CAB,
@@ -295,18 +354,19 @@ def renderizar_classificacao_png(
         )
     draw.text(
         (x_soma + LARGURA_COL_SOMA // 2, centro_cab),
-        "Pts",
+        rotulo_soma,
         font=fontes["cab"],
         fill=PAL_TEXTO_CAB,
         anchor="mm",
     )
-    draw.text(
-        (x_rod + LARGURA_COL_VAR // 2, centro_cab),
-        "Rod",
-        font=fontes["cab"],
-        fill=PAL_TEXTO_CAB,
-        anchor="mm",
-    )
+    if mostrar_rod and x_rod is not None:
+        draw.text(
+            (x_rod + LARGURA_COL_VAR // 2, centro_cab),
+            "Rod",
+            font=fontes["cab"],
+            fill=PAL_TEXTO_CAB,
+            anchor="mm",
+        )
     y += ALTURA_TITULO_TABELA
 
     for indice, linha in enumerate(classificacao):
@@ -341,10 +401,12 @@ def renderizar_classificacao_png(
             fill=cor_texto,
             anchor="lm",
         )
-        for (_, campo), x_col in zip(_COLUNAS_PONTOS, layout["pontos"], strict=True):
+        for (_, campo), x_col, largura_col in zip(
+            _COLUNAS_PONTOS, layout["pontos"], larguras_pontos, strict=True
+        ):
             valor = getattr(linha, campo)
             draw.text(
-                (x_col + LARGURA_COL_PONTO // 2, centro_y),
+                (x_col + largura_col // 2, centro_y),
                 str(valor),
                 font=fontes["linha"],
                 fill=cor_texto,
@@ -358,34 +420,196 @@ def renderizar_classificacao_png(
             anchor="mm",
         )
 
-        if variacao is None:
-            cor_var = PAL_SECUNDARIO
-        elif variacao > 0:
-            cor_var = PAL_POSITIVO
-        elif variacao < 0:
-            cor_var = PAL_NEGATIVO
-        else:
-            cor_var = PAL_SECUNDARIO
+        if mostrar_rod and x_rod is not None:
+            if variacao is None:
+                cor_var = PAL_SECUNDARIO
+            elif variacao > 0:
+                cor_var = PAL_POSITIVO
+            elif variacao < 0:
+                cor_var = PAL_NEGATIVO
+            else:
+                cor_var = PAL_SECUNDARIO
 
-        draw.text(
-            (x_rod + LARGURA_COL_VAR // 2, centro_y),
-            texto_var,
-            font=fontes["var"],
-            fill=cor_var,
-            anchor="mm",
-        )
+            draw.text(
+                (x_rod + LARGURA_COL_VAR // 2, centro_y),
+                texto_var,
+                font=fontes["var"],
+                fill=cor_var,
+                anchor="mm",
+            )
         y += ALTURA_LINHA
 
+    texto_rodape = rodape or "Premio B: metade do premio | Rod = jogos novos | Mata-mata conforme fase"
     draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_RODAPE), fill=PAL_FUNDO)
     draw.text(
         (MARGEM + 8, y + ALTURA_RODAPE // 2),
-        "Placar vale 3, Vencedor vale 2, Gols Casa/Fora vale 1",
+        texto_rodape,
         font=fontes["sub"],
         fill=PAL_TEXTO_SUAVE,
         anchor="lm",
     )
 
     return imagem
+
+
+def renderizar_classificacao_resumida_png(
+    classificacao: list[ClassificacaoLinha],
+    *,
+    titulo: str,
+):
+    from PIL import Image, ImageDraw
+
+    fontes = _carregar_fontes()
+    largura_nome = _largura_nome(classificacao, fontes["linha"])
+    largura_col_pts = 52
+    largura = MARGEM + LARGURA_COL_POS + largura_nome + largura_col_pts + MARGEM
+    altura = (
+        MARGEM + 28 + ALTURA_TITULO_TABELA + ALTURA_LINHA * len(classificacao) + MARGEM
+    )
+    imagem = Image.new("RGB", (largura, altura), PAL_FUNDO)
+    draw = ImageDraw.Draw(imagem)
+    y = MARGEM
+    draw.text((MARGEM, y), titulo, font=fontes["sub"], fill=PAL_TITULO_LARANJA)
+    y += 28
+    x_pos = MARGEM
+    x_nome = x_pos + LARGURA_COL_POS
+    x_pts = x_nome + largura_nome
+    centro_cab = y + ALTURA_TITULO_TABELA // 2
+    draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_TITULO_TABELA), fill=PAL_CABECALHO)
+    for rotulo, x_col, anchor in (
+        ("Pos", x_pos + LARGURA_COL_POS // 2, "mm"),
+        ("Participante", x_nome + PADDING_NOME, "lm"),
+        ("Pts", x_pts + largura_col_pts // 2, "mm"),
+    ):
+        draw.text((x_col, centro_cab), rotulo, font=fontes["cab"], fill=PAL_TEXTO_CAB, anchor=anchor)
+    y += ALTURA_TITULO_TABELA
+    for indice, linha in enumerate(classificacao):
+        cor = PAL_LINHA_LIDER if linha.posicao == 1 else (
+            PAL_LINHA_PAR if indice % 2 == 0 else PAL_LINHA_IMPAR
+        )
+        draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_LINHA), fill=cor)
+        centro_y = y + ALTURA_LINHA // 2
+        nome = linha.participante.strip()
+        draw.text((x_pos + LARGURA_COL_POS // 2, centro_y), str(linha.posicao), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
+        draw.text((x_nome + PADDING_NOME, centro_y), nome, font=fontes["linha"], fill=PAL_TEXTO, anchor="lm")
+        draw.text((x_pts + largura_col_pts // 2, centro_y), str(linha.soma), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
+        y += ALTURA_LINHA
+    return imagem
+
+
+def renderizar_premio_a_png(
+    classificacao: list[ClassificacaoPremioLinha],
+    *,
+    cravadura_ativa: bool = False,
+):
+    from PIL import Image, ImageDraw
+
+    fontes = _carregar_fontes()
+    largura_nome = max(
+        180,
+        max(
+            int(ImageDraw.Draw(Image.new("RGB", (1, 1))).textlength(l.participante.strip(), font=fontes["linha"]))
+            + PADDING_NOME * 2
+            for l in classificacao
+        )
+        if classificacao
+        else 180,
+    )
+    largura_col = 52
+    largura = MARGEM + LARGURA_COL_POS + largura_nome + largura_col * 3 + MARGEM
+    altura = (
+        MARGEM
+        + 28
+        + ALTURA_TITULO_TABELA
+        + ALTURA_LINHA * len(classificacao)
+        + ALTURA_RODAPE
+        + MARGEM
+    )
+
+    imagem = Image.new("RGB", (largura, altura), PAL_FUNDO)
+    draw = ImageDraw.Draw(imagem)
+    y = MARGEM
+    draw.text(
+        (MARGEM, y),
+        "A) CRAVADURA E GRUPOS",
+        font=fontes["sub"],
+        fill=PAL_TITULO_LARANJA,
+    )
+    y += 28
+
+    x_pos = MARGEM
+    x_nome = x_pos + LARGURA_COL_POS
+    x_grp = x_nome + largura_nome
+    x_crav = x_grp + largura_col
+    x_pts = x_crav + largura_col
+    centro_cab = y + ALTURA_TITULO_TABELA // 2
+
+    draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_TITULO_TABELA), fill=PAL_CABECALHO)
+    for rotulo, x_col in (
+        ("Pos", x_pos + LARGURA_COL_POS // 2),
+        ("Participante", x_nome + PADDING_NOME),
+        ("Grp", x_grp + largura_col // 2),
+        ("Crav", x_crav + largura_col // 2),
+        ("Pts", x_pts + largura_col // 2),
+    ):
+        anchor = "mm" if rotulo != "Participante" else "lm"
+        draw.text((x_col, centro_cab), rotulo, font=fontes["cab"], fill=PAL_TEXTO_CAB, anchor=anchor)
+    y += ALTURA_TITULO_TABELA
+
+    for indice, linha in enumerate(classificacao):
+        cor = PAL_LINHA_LIDER if linha.posicao == 1 else (
+            PAL_LINHA_PAR if indice % 2 == 0 else PAL_LINHA_IMPAR
+        )
+        draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_LINHA), fill=cor)
+        centro_y = y + ALTURA_LINHA // 2
+        nome = linha.participante.strip()
+        draw.text((x_pos + LARGURA_COL_POS // 2, centro_y), str(linha.posicao), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
+        draw.text((x_nome + PADDING_NOME, centro_y), nome, font=fontes["linha"], fill=PAL_TEXTO, anchor="lm")
+        draw.text((x_grp + largura_col // 2, centro_y), str(linha.grupos), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
+        draw.text((x_crav + largura_col // 2, centro_y), str(linha.cravadura), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
+        draw.text((x_pts + largura_col // 2, centro_y), str(linha.soma), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
+        y += ALTURA_LINHA
+
+    draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_RODAPE), fill=PAL_FUNDO)
+    draw.text(
+        (MARGEM + 8, y + ALTURA_RODAPE // 2),
+        "Premio A | Grp 10/time | Crav "
+        + ("ativa" if cravadura_ativa else "aguardando REAL OFICIAL"),
+        font=fontes["sub"],
+        fill=PAL_TEXTO_SUAVE,
+        anchor="lm",
+    )
+    return imagem
+
+
+def exportar_premio_a_png(
+    classificacao: list[ClassificacaoPremioLinha],
+    path: str | Path,
+    *,
+    cravadura_ativa: bool = False,
+) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    renderizar_premio_a_png(classificacao, cravadura_ativa=cravadura_ativa).save(path, format="PNG")
+
+
+def combinar_imagens_vertical(imagens: list, *, espaco: int = ESPACO_ENTRE_SECOES):
+    from PIL import Image
+
+    if not imagens:
+        raise ValueError("Nenhuma imagem para combinar.")
+
+    largura = max(imagem.width for imagem in imagens)
+    altura = sum(imagem.height for imagem in imagens) + espaco * max(0, len(imagens) - 1)
+    canvas = Image.new("RGB", (largura, altura), PAL_FUNDO)
+    y = 0
+    for indice, imagem in enumerate(imagens):
+        x = (largura - imagem.width) // 2
+        canvas.paste(imagem, (x, y))
+        y += imagem.height
+        if indice < len(imagens) - 1:
+            y += espaco
+    return canvas
 
 
 ALTURA_BLOCO_JOGO = 24
@@ -954,8 +1178,6 @@ def renderizar_palpites_provisorios_png(blocos):
     return imagem
 
 
-ESPACO_ENTRE_SECOES = 32
-
 
 def combinar_imagens_horizontal(imagens: list, *, espaco: int = ESPACO_ENTRE_SECOES):
     from PIL import Image
@@ -987,6 +1209,7 @@ def exportar_rodada_completa_png(
     mudancas_posicao: dict[str, int | None],
     jogos_novos: list[str] | None = None,
 ) -> None:
+    """Classificacao dos jogos + palpites provisorios (sem tabelas extras)."""
     imagem_classificacao = renderizar_classificacao_png(
         classificacao,
         jogos_realizados=jogos_realizados,

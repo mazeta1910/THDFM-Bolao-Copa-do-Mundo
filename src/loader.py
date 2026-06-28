@@ -10,6 +10,7 @@ def limpar_todos_resultados(bolao: BolaoData) -> None:
     for jogo in bolao.jogos:
         jogo.gols_casa = None
         jogo.gols_fora = None
+        jogo.vencedor_penaltis = None
 
 
 def aplicar_resultados_externos(bolao: BolaoData, path: str | Path) -> None:
@@ -19,7 +20,7 @@ def aplicar_resultados_externos(bolao: BolaoData, path: str | Path) -> None:
 
     limpar_todos_resultados(bolao)
 
-    overrides: dict[int, tuple[int, int]] = {}
+    overrides: dict[int, tuple[int, int, str | None]] = {}
     with path.open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         for row in reader:
@@ -28,13 +29,15 @@ def aplicar_resultados_externos(bolao: BolaoData, path: str | Path) -> None:
             gols_fora = row.get("gols_fora", "").strip()
             if gols_casa == "" or gols_fora == "":
                 continue
-            overrides[jogo_id] = (int(gols_casa), int(gols_fora))
+            penaltis = (row.get("vencedor_penaltis") or "").strip() or None
+            overrides[jogo_id] = (int(gols_casa), int(gols_fora), penaltis)
 
     for jogo in bolao.jogos:
         if jogo.id in overrides:
-            gols_casa, gols_fora = overrides[jogo.id]
+            gols_casa, gols_fora, penaltis = overrides[jogo.id]
             jogo.gols_casa = gols_casa
             jogo.gols_fora = gols_fora
+            jogo.vencedor_penaltis = penaltis
 
 
 def salvar_resultados(bolao: BolaoData, path: str | Path) -> None:
@@ -43,20 +46,29 @@ def salvar_resultados(bolao: BolaoData, path: str | Path) -> None:
 
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["jogo_id", "gols_casa", "gols_fora"])
+        writer.writerow(["jogo_id", "gols_casa", "gols_fora", "vencedor_penaltis"])
         for jogo in sorted(bolao.jogos, key=lambda j: j.id):
             casa = "" if jogo.gols_casa is None else jogo.gols_casa
             fora = "" if jogo.gols_fora is None else jogo.gols_fora
-            writer.writerow([jogo.id, casa, fora])
+            penaltis = "" if not jogo.vencedor_penaltis else jogo.vencedor_penaltis
+            writer.writerow([jogo.id, casa, fora, penaltis])
 
 
-def atualizar_resultado(bolao: BolaoData, jogo_id: int, gols_casa: int, gols_fora: int) -> Jogo:
+def atualizar_resultado(
+    bolao: BolaoData,
+    jogo_id: int,
+    gols_casa: int,
+    gols_fora: int,
+    *,
+    vencedor_penaltis: str | None = None,
+) -> Jogo:
     jogo = next((j for j in bolao.jogos if j.id == jogo_id), None)
     if jogo is None:
         raise ValueError(f"Jogo {jogo_id} não encontrado.")
 
     jogo.gols_casa = gols_casa
     jogo.gols_fora = gols_fora
+    jogo.vencedor_penaltis = vencedor_penaltis
     return jogo
 
 
@@ -69,6 +81,7 @@ def remover_resultados(bolao: BolaoData, jogo_ids: list[int]) -> list[Jogo]:
             raise ValueError(f"Jogo {jogo_id} não encontrado.")
         jogo.gols_casa = None
         jogo.gols_fora = None
+        jogo.vencedor_penaltis = None
         removidos.append(jogo)
     return removidos
 

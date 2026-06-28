@@ -5,9 +5,18 @@ __pycache__/
 venv/
 data/classificacao.csv
 
-# Exports gerados pelo CLI (PNG/txt locais)
+# Exports gerados (sempre em data/ultimo/)
+data/ultimo/
+
+# Legado na raiz de data/ (nao devem reaparecer)
 data/classificacao_grupo.png
 data/classificacao_grupo.txt
+data/classificacao_premio_a.png
+data/classificacao_32avos.png
+data/classificacao_grupos_32avos.png
+data/classificacao_fase_*.png
+data/classificacao_fase_*.txt
 data/palpites_*.png
 data/palpites_*.txt
 data/rodada_*.png
+data/ranking_grupos.txt

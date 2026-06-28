@@ -38,6 +38,7 @@ def salvar_snapshot(
                 "vencedor": linha.vencedor,
                 "gols_casa": linha.gols_casa,
                 "gols_fora": linha.gols_fora,
+                "grupos": linha.grupos,
             }
             for linha in classificacao
         },

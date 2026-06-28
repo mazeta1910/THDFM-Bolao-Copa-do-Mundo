@@ -21,9 +21,17 @@ from src.ranking import (
     carregar_classificacao_referencia,
     comparar_classificacoes,
     exportar_classificacao,
+    exportar_classificacao_premio_a,
     exportar_classificacao_texto,
     formatar_classificacao_compartilhar,
-    gerar_classificacao,
+    formatar_classificacao_fase_texto,
+    FASES_BOLAO,
+    gerar_classificacao_32avos,
+    gerar_classificacao_fase,
+    gerar_classificacao_grupos_mais_32avos,
+    gerar_classificacao_jogos,
+    gerar_classificacao_premio_a,
+    legenda_pesos_fase,
     jogos_recem_realizados,
     resumir_jogos_export,
     sugerir_jogos_provisorios,
@@ -39,16 +47,26 @@ from src.palpites_view import (
     formatar_palpites_provisorio_texto,
     formatar_palpites_texto,
     listar_palpites_jogos,
-    nome_arquivo_palpites,
-    nome_arquivo_rodada,
+)
+from src.grupos_ranking import times_iguais
+from src.scoring import FASE_GRUPOS_MAX
+from src.exports_manager import (
+    atualizar_manifest,
+    caminho_fase,
+    caminho_palpites,
+    caminho_ultimo,
+    formatar_resumo_ultimo,
+    limpar_exports_legados,
 )
 from src.thdfm_parser import parse_thdfm_csv
 
 try:
     from src.image_export import (
+        exportar_classificacao_fase_png,
         exportar_classificacao_png,
         exportar_palpites_png,
         exportar_palpites_provisorios_png,
+        exportar_premio_a_png,
         exportar_rodada_completa_png,
     )
 
@@ -61,24 +79,41 @@ DATA_DIR = BASE_DIR / "data"
 DOWNLOADS = Path.home() / "Downloads"
 BOLAO_CSV = DATA_DIR / "bolao.csv"
 RESULTADOS_CSV = DATA_DIR / "resultados.csv"
-CLASSIFICACAO_CSV = DATA_DIR / "classificacao.csv"
-CLASSIFICACAO_TXT = DATA_DIR / "classificacao_grupo.txt"
-CLASSIFICACAO_PNG = DATA_DIR / "classificacao_grupo.png"
+CLASSIFICACAO_CSV = caminho_ultimo(DATA_DIR, "classificacao_csv")
+CLASSIFICACAO_TXT = caminho_ultimo(DATA_DIR, "classificacao_txt")
+CLASSIFICACAO_PNG = caminho_ultimo(DATA_DIR, "classificacao_png")
+CLASSIFICACAO_PREMIO_A_CSV = caminho_ultimo(DATA_DIR, "premio_a_csv")
+CLASSIFICACAO_PREMIO_A_PNG = caminho_ultimo(DATA_DIR, "premio_a_png")
+CLASSIFICACAO_32AVOS_PNG = caminho_ultimo(DATA_DIR, "fase_32avos_png")
+CLASSIFICACAO_GRUPOS_32AVOS_PNG = caminho_ultimo(DATA_DIR, "fase_grupos_32avos_png")
+RODADA_PNG = caminho_ultimo(DATA_DIR, "rodada_png")
+CRAVADURA_CSV = DATA_DIR / "BOLÃO THDFM WC26 - CRAVADURA.csv"
 SNAPSHOT_JSON = DATA_DIR / "classificacao_snapshot.json"
 REFERENCIA_CSV = DATA_DIR / "classificacao_referencia.csv"
 CLASSIFICACOES_REAIS_CSV = DATA_DIR / "Planilha Classificações Reais.csv"
 PALPITES_PRIMEIRA_FASE_CSV = (
     DATA_DIR / "BOLÃO THDFM WC26 - RESPOSTAS PRIMEIRA FASE E CRAVADURA.csv"
 )
-RANKING_GRUPOS_TXT = DATA_DIR / "ranking_grupos.txt"
+RESPOSTAS_32_AVOS_CSV = DATA_DIR / "BOLÃO THDFM WC26 - RESPOSTAS 32 AVOS.csv"
+PALPITES_PENALTIS_CSV = DATA_DIR / "palpites_penaltis.csv"
+RANKING_GRUPOS_TXT = caminho_ultimo(DATA_DIR, "ranking_grupos_txt")
 
 _ARQUIVOS_IGNORADOS = {
     "resultados.csv",
     "classificacao.csv",
     "classificacao_referencia.csv",
-    "classificacao_grupo.txt",
     "classificacao_snapshot.json",
+    "palpites_penaltis.csv",
 }
+
+
+def _finalizar_exports(descricoes: dict[str, str]) -> None:
+    removidos = limpar_exports_legados(DATA_DIR)
+    manifest = atualizar_manifest(DATA_DIR, descricoes)
+    print(f"\n{formatar_resumo_ultimo(DATA_DIR)}")
+    if removidos:
+        print(f"Limpeza: {len(removidos)} arquivo(s) antigo(s) removido(s) de data/.")
+    print(f"Indice: {manifest}")
 
 
 def _resolve_arquivo(path: Path, fallback_name: str) -> Path:
@@ -111,7 +146,24 @@ def carregar_bolao(arquivo: Path | None = None):
 
     bolao = parse_thdfm_csv(path)
     aplicar_resultados_externos(bolao, RESULTADOS_CSV)
+    _aplicar_palpites_penaltis_bolao(bolao)
     return bolao
+
+
+def _aplicar_palpites_penaltis_bolao(bolao) -> None:
+    from src.penaltis import (
+        aplicar_palpites_penaltis,
+        carregar_palpites_penaltis,
+        carregar_palpites_penaltis_respostas,
+        exportar_palpites_penaltis,
+    )
+
+    palpites = carregar_palpites_penaltis(PALPITES_PENALTIS_CSV)
+    if not palpites and RESPOSTAS_32_AVOS_CSV.exists():
+        palpites = carregar_palpites_penaltis_respostas(RESPOSTAS_32_AVOS_CSV)
+        if palpites:
+            exportar_palpites_penaltis(palpites, PALPITES_PENALTIS_CSV)
+    aplicar_palpites_penaltis(bolao, palpites)
 
 
 def _carregar_baseline_variacao() -> tuple[dict[str, dict] | None, set[int], bool]:
@@ -133,17 +185,40 @@ def _carregar_baseline_variacao() -> tuple[dict[str, dict] | None, set[int], boo
     return None, set(), False
 
 
-def _classificacao_programa(bolao) -> list:
-    """Total de pontos calculado dos palpites e resultados lancados."""
-    return gerar_classificacao(bolao)
+def _classificacao_jogos(bolao) -> list:
+    """Classificacao B: pontos dos resultados dos jogos."""
+    return gerar_classificacao_jogos(bolao)
+
+
+def _classificacao_premio_a(bolao) -> tuple[list, bool]:
+    """Classificacao A: palpitadura dos grupos + cravadura (quando REAL OFICIAL existir)."""
+    return gerar_classificacao_premio_a(
+        bolao.participantes,
+        classificacoes_reais_path=CLASSIFICACOES_REAIS_CSV,
+        palpites_grupos_path=PALPITES_PRIMEIRA_FASE_CSV,
+        cravadura_path=CRAVADURA_CSV,
+    )
+
+
+def _tabelas_mata_mata(bolao) -> tuple[list | None, list | None]:
+    """Tabelas extras de 32 avos quando houver jogos J73+ realizados."""
+    if not any(j.realizado and j.id >= 73 for j in bolao.jogos):
+        return None, None
+    return (
+        gerar_classificacao_32avos(bolao),
+        gerar_classificacao_grupos_mais_32avos(bolao),
+    )
 
 
 def _atualizar_exports_classificacao(bolao) -> None:
-    classificacao = _classificacao_programa(bolao)
+    classificacao = _classificacao_jogos(bolao)
+    premio_a, cravadura_ativa = _classificacao_premio_a(bolao)
+    classificacao_32avos, classificacao_grupos_32avos = _tabelas_mata_mata(bolao)
     realizados = sum(1 for j in bolao.jogos if j.realizado)
     variacoes = calcular_variacoes(classificacao, None)
     mudancas_posicao = calcular_mudancas_posicao(classificacao, None)
     exportar_classificacao(classificacao, CLASSIFICACAO_CSV)
+    exportar_classificacao_premio_a(premio_a, CLASSIFICACAO_PREMIO_A_CSV)
     exportar_classificacao_texto(
         classificacao,
         CLASSIFICACAO_TXT,
@@ -151,6 +226,10 @@ def _atualizar_exports_classificacao(bolao) -> None:
         total_jogos=len(bolao.jogos),
         variacoes=variacoes,
         mudancas_posicao=mudancas_posicao,
+        premio_a=premio_a,
+        cravadura_ativa=cravadura_ativa,
+        classificacao_32avos=classificacao_32avos,
+        classificacao_grupos_32avos=classificacao_grupos_32avos,
     )
     if _PNG_DISPONIVEL:
         exportar_classificacao_png(
@@ -161,10 +240,19 @@ def _atualizar_exports_classificacao(bolao) -> None:
             variacoes=variacoes,
             mudancas_posicao=mudancas_posicao,
         )
+        exportar_premio_a_png(
+            premio_a,
+            CLASSIFICACAO_PREMIO_A_PNG,
+            cravadura_ativa=cravadura_ativa,
+        )
+        if classificacao_32avos is not None:
+            _exportar_png_fase(bolao, "32avos", CLASSIFICACAO_32AVOS_PNG)
+        if classificacao_grupos_32avos is not None:
+            _exportar_png_fase(bolao, "grupos_mais_32avos", CLASSIFICACAO_GRUPOS_32AVOS_PNG)
 
 
 def _salvar_baseline(bolao, *, mensagem_snapshot: bool = True) -> None:
-    classificacao = _classificacao_programa(bolao)
+    classificacao = _classificacao_jogos(bolao)
     realizados = sum(1 for j in bolao.jogos if j.realizado)
     jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
     salvar_snapshot(
@@ -262,6 +350,16 @@ def cmd_importar_referencia(args: argparse.Namespace) -> int:
     print(f"Baseline salva em {SNAPSHOT_JSON.name} ({realizados} jogos).")
 
     _atualizar_exports_classificacao(bolao)
+    _finalizar_exports(
+        {
+            "classificacao_txt": "Texto completo para compartilhar",
+            "classificacao_png": "Classificacao geral (premio B)",
+            "classificacao_csv": "Planilha premio B",
+            "premio_a_png": "Cravadura + palpitadura dos grupos",
+            "fase_32avos_png": "Pontuacao parcial 32 avos (Placar/Vencedor/Gols/Soma)",
+            "fase_grupos_32avos_png": "Pontuacao parcial grupos + 32 avos (detalhada)",
+        }
+    )
     print(f"Arquivos atualizados: {CLASSIFICACAO_TXT.name}, {CLASSIFICACAO_CSV.name}", end="")
     if _PNG_DISPONIVEL:
         print(f", {CLASSIFICACAO_PNG.name}")
@@ -293,6 +391,67 @@ def _parse_placar(texto: str) -> tuple[int, int]:
     if not match:
         raise ValueError(f"Placar inválido: {texto!r}. Use o formato 2-1.")
     return int(match.group(1)), int(match.group(2))
+
+
+def _resolver_vencedor_penaltis(jogo, texto: str) -> str:
+    escolha = texto.strip()
+    if not escolha:
+        raise ValueError("Informe o time que passou nos penaltis.")
+    if times_iguais(escolha, jogo.casa):
+        return jogo.casa.strip()
+    if times_iguais(escolha, jogo.fora):
+        return jogo.fora.strip()
+    raise ValueError(
+        f"Time invalido: {escolha!r}. Use {jogo.casa.strip()} ou {jogo.fora.strip()}."
+    )
+
+
+def _registrar_resultado_jogo(
+    bolao,
+    jogo,
+    casa: int,
+    fora: int,
+    *,
+    vencedor_penaltis: str | None = None,
+    perguntar_penaltis: bool = False,
+    provisorio: bool = False,
+) -> bool:
+    """Registra placar. Retorna True se for placar parcial (jogo rolando)."""
+    penaltis = vencedor_penaltis
+    empate_mata_mata = jogo.id > FASE_GRUPOS_MAX and casa == fora
+
+    if empate_mata_mata and not provisorio and not penaltis:
+        if perguntar_penaltis:
+            texto = input(
+                f"Empate no mata-mata.\n"
+                f"  Enter = placar parcial (jogo rolando)\n"
+                f"  {jogo.casa.strip()} ou {jogo.fora.strip()} = passou nos penaltis\n"
+                f"Escolha: "
+            ).strip()
+            if not texto:
+                provisorio = True
+            else:
+                penaltis = _resolver_vencedor_penaltis(jogo, texto)
+        else:
+            raise ValueError(
+                "Empate no mata-mata: use --provisorio (placar parcial) "
+                "ou --penaltis (time que passou nos penaltis)."
+            )
+
+    if empate_mata_mata and not provisorio and not penaltis:
+        raise ValueError(
+            "Empate no mata-mata: informe --penaltis ou use --provisorio "
+            "para placar parcial enquanto o jogo rola."
+        )
+
+    atualizar_resultado(
+        bolao,
+        jogo.id,
+        casa,
+        fora,
+        vencedor_penaltis=None if provisorio else penaltis,
+    )
+    return provisorio
 
 
 def cmd_resultado(args: argparse.Namespace) -> int:
@@ -329,8 +488,15 @@ def cmd_resultado(args: argparse.Namespace) -> int:
                     break
                 try:
                     casa, fora = _parse_placar(texto)
-                    atualizar_resultado(bolao, jogo.id, casa, fora)
-                    print(f"  Registrado: {casa}-{fora}")
+                    parcial = _registrar_resultado_jogo(
+                        bolao, jogo, casa, fora, perguntar_penaltis=True
+                    )
+                    msg = f"  Registrado: {casa}-{fora}"
+                    if parcial:
+                        msg += " (parcial)"
+                    elif jogo.vencedor_penaltis:
+                        msg += f" (penaltis: {jogo.vencedor_penaltis})"
+                    print(msg)
                 except ValueError as exc:
                     print(f"  Erro: {exc}")
         except KeyboardInterrupt:
@@ -343,8 +509,25 @@ def cmd_resultado(args: argparse.Namespace) -> int:
             print("Informe apenas um jogo por vez ao registrar placar.")
             return 1
         casa, fora = _parse_placar(args.placar)
-        jogo = atualizar_resultado(bolao, args.jogo[0], casa, fora)
-        print(f"Jogo {jogo.id} ({jogo.casa} x {jogo.fora}): {casa}-{fora}")
+        jogo = next(j for j in bolao.jogos if j.id == args.jogo[0])
+        penaltis = getattr(args, "penaltis", None)
+        if penaltis:
+            penaltis = _resolver_vencedor_penaltis(jogo, penaltis)
+        parcial = _registrar_resultado_jogo(
+            bolao,
+            jogo,
+            casa,
+            fora,
+            vencedor_penaltis=penaltis,
+            perguntar_penaltis=getattr(args, "perguntar_penaltis", False),
+            provisorio=getattr(args, "provisorio", False),
+        )
+        msg = f"Jogo {jogo.id} ({jogo.casa} x {jogo.fora}): {casa}-{fora}"
+        if parcial:
+            msg += " (parcial)"
+        elif jogo.vencedor_penaltis:
+            msg += f" (penaltis: {jogo.vencedor_penaltis})"
+        print(msg)
 
     salvar_resultados(bolao, RESULTADOS_CSV)
     print(f"Resultados salvos em {RESULTADOS_CSV}")
@@ -361,9 +544,69 @@ def _imprimir_classificacao(classificacao: list) -> None:
         )
 
 
+def _contar_jogos_fase(bolao, fase_id: str) -> tuple[int, int]:
+    fase = FASES_BOLAO[fase_id]
+    realizados = sum(
+        1 for jogo in bolao.jogos if jogo.realizado and jogo.id in fase.jogos_ids
+    )
+    return realizados, len(fase.jogos_ids)
+
+
+def _exportar_png_fase(bolao, fase_id: str, path: Path) -> None:
+    fase = FASES_BOLAO[fase_id]
+    classificacao = gerar_classificacao_fase(bolao, fase_id)
+    realizados, total = _contar_jogos_fase(bolao, fase_id)
+    exportar_classificacao_fase_png(
+        classificacao,
+        path,
+        titulo=fase.titulo,
+        rodape=legenda_pesos_fase(fase_id),
+        jogos_realizados=realizados,
+        total_jogos=total,
+    )
+
+
+def cmd_fase(args: argparse.Namespace) -> int:
+    fase_id = args.fase.lower()
+    if fase_id not in FASES_BOLAO:
+        opcoes = ", ".join(FASES_BOLAO)
+        print(f"Fase invalida. Opcoes: {opcoes}")
+        return 1
+
+    bolao = carregar_bolao()
+    classificacao = gerar_classificacao_fase(bolao, fase_id)
+    realizados, total = _contar_jogos_fase(bolao, fase_id)
+    texto = formatar_classificacao_fase_texto(
+        classificacao,
+        fase_id=fase_id,
+        jogos_realizados=realizados,
+        total_jogos=total,
+    )
+    print(texto)
+
+    txt_path = caminho_fase(DATA_DIR, fase_id, "txt")
+    png_path = caminho_fase(DATA_DIR, fase_id, "png")
+    if not args.sem_arquivo:
+        txt_path.write_text(texto + "\n", encoding="utf-8")
+        print(f"\nTexto salvo em {txt_path}")
+    if not args.sem_png:
+        if not _PNG_DISPONIVEL:
+            print("PNG nao gerado: instale Pillow.", file=sys.stderr)
+        else:
+            _exportar_png_fase(bolao, fase_id, png_path)
+            print(f"Imagem salva em {png_path}")
+    _finalizar_exports(
+        {
+            "classificacao_png": "Classificacao geral (premio B)",
+            f"fase_{fase_id}": f"Pontuacao parcial detalhada ({fase_id})",
+        }
+    )
+    return 0
+
+
 def cmd_classificar(args: argparse.Namespace) -> int:
     bolao = carregar_bolao()
-    classificacao = _classificacao_programa(bolao)
+    classificacao = _classificacao_jogos(bolao)
     _imprimir_classificacao(classificacao)
     return 0
 
@@ -390,7 +633,7 @@ def cmd_ranking_grupos(args: argparse.Namespace) -> int:
 
 def cmd_exportar(args: argparse.Namespace) -> int:
     bolao = carregar_bolao()
-    classificacao = _classificacao_programa(bolao)
+    classificacao = _classificacao_jogos(bolao)
     exportar_classificacao(classificacao, CLASSIFICACAO_CSV)
     print(f"Classificação exportada para {CLASSIFICACAO_CSV}")
     return 0
@@ -423,7 +666,9 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
         sys.stdout.reconfigure(encoding="utf-8")
 
     bolao = carregar_bolao()
-    classificacao = _classificacao_programa(bolao)
+    classificacao = _classificacao_jogos(bolao)
+    premio_a, cravadura_ativa = _classificacao_premio_a(bolao)
+    classificacao_32avos, classificacao_grupos_32avos = _tabelas_mata_mata(bolao)
     realizados = sum(1 for j in bolao.jogos if j.realizado)
     jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
 
@@ -471,6 +716,10 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
         mudancas_posicao=mudancas_posicao,
         jogos_novos=jogos_novos or None,
         legenda_rodada=legenda_rodada,
+        premio_a=premio_a,
+        cravadura_ativa=cravadura_ativa,
+        classificacao_32avos=classificacao_32avos,
+        classificacao_grupos_32avos=classificacao_grupos_32avos,
     )
     print(texto)
 
@@ -484,6 +733,10 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
             mudancas_posicao=mudancas_posicao,
             jogos_novos=jogos_novos or None,
             legenda_rodada=legenda_rodada,
+            premio_a=premio_a,
+            cravadura_ativa=cravadura_ativa,
+            classificacao_32avos=classificacao_32avos,
+            classificacao_grupos_32avos=classificacao_grupos_32avos,
         )
         print(f"\nTexto salvo em {CLASSIFICACAO_TXT}")
 
@@ -504,6 +757,33 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
                 jogos_novos=jogos_novos or None,
             )
             print(f"Imagem salva em {CLASSIFICACAO_PNG}")
+            exportar_premio_a_png(
+                premio_a,
+                CLASSIFICACAO_PREMIO_A_PNG,
+                cravadura_ativa=cravadura_ativa,
+            )
+            print(f"Imagem salva em {CLASSIFICACAO_PREMIO_A_PNG}")
+        if classificacao_32avos is not None:
+            _exportar_png_fase(bolao, "32avos", CLASSIFICACAO_32AVOS_PNG)
+            print(f"Imagem salva em {CLASSIFICACAO_32AVOS_PNG}")
+        if classificacao_grupos_32avos is not None:
+            _exportar_png_fase(bolao, "grupos_mais_32avos", CLASSIFICACAO_GRUPOS_32AVOS_PNG)
+            print(f"Imagem salva em {CLASSIFICACAO_GRUPOS_32AVOS_PNG}")
+
+    descricoes_exports: dict[str, str] = {}
+    if not args.sem_arquivo:
+        descricoes_exports["classificacao_txt"] = "Texto completo para compartilhar"
+    if not args.sem_png:
+        descricoes_exports["classificacao_png"] = "Classificacao geral (premio B)"
+        descricoes_exports["premio_a_png"] = "Cravadura + palpitadura dos grupos"
+        if classificacao_32avos is not None:
+            descricoes_exports["fase_32avos_png"] = (
+                "Pontuacao parcial 32 avos (Placar/Vencedor/Gols/Soma)"
+            )
+        if classificacao_grupos_32avos is not None:
+            descricoes_exports["fase_grupos_32avos_png"] = (
+                "Pontuacao parcial grupos + 32 avos (detalhada)"
+            )
 
     jogo_ids = jogo_ids_export if jogo_ids_export else getattr(args, "jogo", None)
     if jogo_ids and not args.sem_png:
@@ -519,7 +799,7 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
                 ids = ", ".join(str(jogo_id) for jogo_id in sem_placar)
                 print(f"Jogos sem placar provisorio: {ids}", file=sys.stderr)
                 return 1
-            rodada_path = DATA_DIR / nome_arquivo_rodada(jogo_ids)
+            rodada_path = RODADA_PNG
             exportar_rodada_completa_png(
                 classificacao,
                 blocos,
@@ -530,7 +810,12 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
                 mudancas_posicao=mudancas_posicao,
                 jogos_novos=jogos_novos or None,
             )
+            ids_txt = ", ".join(str(jogo_id) for jogo_id in jogo_ids)
+            descricoes_exports["rodada_png"] = f"Classificacao + provisorio (J{ids_txt})"
             print(f"Imagem completa salva em {rodada_path}")
+
+    if descricoes_exports:
+        _finalizar_exports(descricoes_exports)
 
     if args.confirmar_rodada or args.zerar_variacao:
         salvar_snapshot(
@@ -580,7 +865,7 @@ def cmd_palpites(args: argparse.Namespace) -> int:
     print(texto)
 
     if not args.sem_arquivo:
-        txt_path = DATA_DIR / nome_arquivo_palpites(args.jogo, "txt", provisorio=args.provisorio)
+        txt_path = caminho_palpites(DATA_DIR, args.provisorio, "txt")
         txt_path.write_text(texto + "\n", encoding="utf-8")
         print(f"\nTexto salvo em {txt_path}")
 
@@ -591,12 +876,16 @@ def cmd_palpites(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
         else:
-            png_path = DATA_DIR / nome_arquivo_palpites(args.jogo, "png", provisorio=args.provisorio)
+            png_path = caminho_palpites(DATA_DIR, args.provisorio, "png")
             if args.provisorio:
                 exportar_palpites_provisorios_png(blocos, png_path)
             else:
                 exportar_palpites_png(blocos, png_path)
             print(f"Imagem salva em {png_path}")
+
+    chave = "palpites_provisorios" if args.provisorio else "palpites"
+    ids_txt = ", ".join(str(jogo_id) for jogo_id in args.jogo)
+    _finalizar_exports({chave: f"Palpites dos jogos J{ids_txt}"})
 
     return 0
 
@@ -750,6 +1039,15 @@ def main(argv: list[str] | None = None) -> int:
     p_resultado.add_argument("--jogo", type=int, nargs="+")
     p_resultado.add_argument("--placar", help="Formato: 2-1")
     p_resultado.add_argument(
+        "--penaltis",
+        help="Time que passou nos penaltis (empate final no mata-mata)",
+    )
+    p_resultado.add_argument(
+        "--provisorio",
+        action="store_true",
+        help="Placar parcial (ex.: 0-0 com jogo rolando); nao exige penaltis",
+    )
+    p_resultado.add_argument(
         "--remover",
         action="store_true",
         help="Remove o placar dos jogos informados em --jogo",
@@ -783,6 +1081,20 @@ def main(argv: list[str] | None = None) -> int:
         help="Nao salva ranking_grupos.txt",
     )
     p_ranking_grupos.set_defaults(func=cmd_ranking_grupos)
+
+    p_fase = subparsers.add_parser(
+        "fase",
+        help="Pontuacao parcial detalhada por fase (Placar/Vencedor/Gols/Soma)",
+    )
+    p_fase.add_argument(
+        "--fase",
+        required=True,
+        choices=sorted(FASES_BOLAO),
+        help="grupos, 32avos, oitavas, quartas, semis ou finais",
+    )
+    p_fase.add_argument("--sem-arquivo", action="store_true")
+    p_fase.add_argument("--sem-png", action="store_true")
+    p_fase.set_defaults(func=cmd_fase)
 
     p_exportar = subparsers.add_parser("exportar", help="Exporta classificação para CSV")
     p_exportar.set_defaults(func=cmd_exportar)

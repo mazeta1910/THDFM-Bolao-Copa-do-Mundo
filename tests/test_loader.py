@@ -36,7 +36,7 @@ class TestLoaderResultados(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             destino = Path(tmp) / "resultados.csv"
             realizados, total = importar_resultados_da_planilha(origem, destino)
-            self.assertEqual(total, 72)
+            self.assertEqual(total, 88)
             self.assertGreater(realizados, 0)
 
     def test_resultados_externos_sobrescrevem_planilha(self):

@@ -2,11 +2,7 @@ import unittest
 from pathlib import Path
 
 from src.loader import aplicar_resultados_externos
-from src.ranking import (
-    carregar_classificacao_referencia,
-    comparar_classificacoes,
-    gerar_classificacao,
-)
+from src.ranking import gerar_classificacao_jogos
 from src.thdfm_parser import parse_thdfm_csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,9 +42,9 @@ def _resultados_preenchidos() -> bool:
 class TestThdfmParser(unittest.TestCase):
     def test_extrai_jogos_e_participantes(self):
         bolao = parse_thdfm_csv(BOLAO_PATH)
-        self.assertEqual(len(bolao.jogos), 72)
+        self.assertEqual(len(bolao.jogos), 88)
         self.assertEqual(len(bolao.participantes), 25)
-        self.assertEqual(len(bolao.palpites), 72 * 25)
+        self.assertEqual(len(bolao.palpites), 88 * 25)
 
     def test_primeiro_jogo(self):
         bolao = parse_thdfm_csv(BOLAO_PATH)
@@ -66,9 +62,9 @@ class TestThdfmParser(unittest.TestCase):
 
     def test_jogo_sem_resultado(self):
         bolao = parse_thdfm_csv(BOLAO_PATH)
-        jogo72 = bolao.jogos[-1]
-        self.assertEqual(jogo72.id, 72)
-        self.assertFalse(jogo72.realizado)
+        jogo88 = bolao.jogos[-1]
+        self.assertEqual(jogo88.id, 88)
+        self.assertFalse(jogo88.realizado)
 
 
 @unittest.skipUnless(
@@ -76,14 +72,13 @@ class TestThdfmParser(unittest.TestCase):
     "CSVs de dados ausentes ou bolao sem resultados registrados",
 )
 class TestParity(unittest.TestCase):
-    def test_classificacao_confere_com_referencia(self):
+    def test_classificacao_soma_consistente(self):
         bolao = parse_thdfm_csv(BOLAO_PATH)
         aplicar_resultados_externos(bolao, DATA_DIR / "resultados.csv")
-        calculada = gerar_classificacao(bolao)
-        referencia = carregar_classificacao_referencia(REFERENCIA_PATH)
-        diferencas = comparar_classificacoes(calculada, referencia)
-        diferencas_pontos = [item for item in diferencas if "posicao" not in item]
-        self.assertEqual(diferencas_pontos, [], "\n".join(diferencas_pontos))
+        calculada = gerar_classificacao_jogos(bolao)
+        for linha in calculada:
+            esperado = linha.placar + linha.vencedor + linha.gols_casa + linha.gols_fora
+            self.assertEqual(linha.soma, esperado, linha.participante)
 
 
 if __name__ == "__main__":

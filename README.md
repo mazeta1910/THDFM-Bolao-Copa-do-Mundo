@@ -50,18 +50,37 @@ python -m src.cli resultado --jogo 61 --placar 2-1
 
 ## Arquivos em `data/`
 
+### Dados operacionais (versionados no Git)
+
 | Arquivo | Quem atualiza | Função |
 |---------|---------------|--------|
-| `bolao.csv` | Admin (export do Excel) | Palpites de todos + estrutura dos 72 jogos. Fonte dos nomes e placares da aba *Fase de grupos*. |
+| `bolao.csv` | Admin (export do Excel) | Palpites de todos + estrutura dos jogos (grupos e mata-mata). |
 | `resultados.csv` | **Programa** (opções 3–5 do menu) | Placares lançados pela CLI. **Versionado no Git** para sincronizar entre PCs. |
 | `classificacao_snapshot.json` | Programa (opção 2 ou 10) | Baseline da coluna **Rod**: pontos e jogos já “fechados” na última rodada confirmada. **Versionado no Git**. |
 | `classificacao_referencia.csv` | Excel (opcional) | Classificação exportada do Excel para **conferência** (`conferir`). |
-| `classificacao.csv` | Programa (`exportar` / compartilhar) | CSV completo com Placar, Vencedor, Gols casa, Gols fora e Soma. |
-| `classificacao_grupo.txt` | Programa | Texto curto (Pos, Pts, Rod) para colar no grupo. |
-| `classificacao_grupo.png` | Programa | Imagem da classificação com **todas as colunas de pontuação** + Pts + Rod. |
-| `rodada_jXX_YY.png` | Programa | Classificação + palpites provisórios dos jogos informados. |
-| `palpites_jXX.png` | Programa | Só palpites de um ou mais jogos. |
+| `palpites_penaltis.csv` | Programa / import | Palpites de vencedor nos pênaltis (mata-mata empatado). |
+| `BOLÃO THDFM WC26 - CRAVADURA.csv` | Excel | Cravadura congelada até 19/jul (coluna REAL OFICIAL). |
+| `BOLÃO THDFM WC26 - RESPOSTAS 32 AVOS.csv` | Participantes | Palpites dos 32 avos (import via script). |
 | `flags/` | `python -m src.cli bandeiras` | Bandeiras usadas nos PNGs de palpites. |
+
+### Exports gerados — pasta `data/ultimo/`
+
+**Sempre consulte `data/ultimo/`** para achar o último arquivo gerado. Os nomes são fixos (sem sufixo de jogo ou data); cada novo export **substitui** o anterior.
+
+| Arquivo | Conteúdo |
+|---------|----------|
+| `manifest.txt` | Índice do que existe na pasta e descrição de cada arquivo. |
+| `classificacao.png` / `.txt` / `.csv` | Classificação geral — prêmio B (todos os jogos realizados). |
+| `premio_a.png` / `.csv` | Prêmio A: palpitadura dos grupos + cravadura. |
+| `fase_32avos.png` | Pontuação parcial dos 32 avos (Placar, Vencedor, Gols casa, Gols fora, Soma). |
+| `fase_grupos_mais_32avos.png` | Grupos + 32 avos combinados (detalhada). |
+| `rodada.png` | Classificação + palpites provisórios da rodada informada. |
+| `palpites.png` / `palpites_provisorios.png` | Palpites exportados. |
+| `ranking_grupos.txt` | Ranking parcial da classificação dos grupos. |
+
+Ao compartilhar, exportar palpites ou gerar fase, o programa **remove automaticamente** exports antigos que ficavam soltos em `data/` (ex.: `rodada_j73.png`, `classificacao_32avos.png`).
+
+A pasta `data/ultimo/` está no `.gitignore` — não versione PNGs/TXTs gerados; versione só `resultados.csv` e `classificacao_snapshot.json`.
 
 ### Sincronizar entre administradores (Git)
 
@@ -123,15 +142,21 @@ Outros
  11. Validar bolao
  12. Conferir com referencia do Excel
  13. Importar classificacao do Excel
+ 14. Ranking classificacao dos grupos (parcial)
+ 15. Pontuacao parcial por fase (detalhada)
+
+Exports atuais: data/ultimo/ (veja manifest.txt)
 ```
 
 ### Opção 1 — Compartilhar
 
-Gera `classificacao_grupo.txt`, `classificacao_grupo.png` e mostra a tabela no terminal.
+Gera arquivos em **`data/ultimo/`** e mostra a tabela no terminal.
 
-- O **PNG** traz: Pos, Participante, **Placar, Venc., G.casa, G.fora**, **Pts** e **Rod**.
-- O **texto** traz versão resumida (Pos, Pts, Rod) para WhatsApp.
-- Se informar IDs de jogos (ex.: `57 58`), gera também `rodada_j57_58.png`: classificação ao lado dos palpites provisórios desses jogos.
+- **`classificacao.png`**: Pos, Participante, Placar, Vencedor, Gols casa, Gols fora, Pts e Rod (prêmio B).
+- **`premio_a.png`**: tabela A (grupos + cravadura).
+- **`fase_32avos.png`** e **`fase_grupos_mais_32avos.png`**: quando houver jogos J73+ realizados, com detalhamento por coluna de pontuação.
+- **`classificacao.txt`**: texto completo para WhatsApp (versão resumida + tabelas A/B).
+- Se informar IDs de jogos (ex.: `73 74`), gera também **`rodada.png`**: classificação + palpites provisórios desses jogos.
 - A coluna **Rod** mostra quantos pontos cada um ganhou **desde a última baseline** (snapshot). Setas ↑↓ na posição indicam subida ou queda no ranking.
 
 ### Opção 2 — Confirmar rodada
@@ -142,6 +167,7 @@ Use **ao final do dia**, quando todos os placares oficiais estiverem corretos. A
 
 - **3:** um jogo por vez (informa ID e placar, ex.: `2-1`).
 - **4:** modo interativo nos jogos pendentes; Enter pula, `sair` encerra.
+- Em **empate no mata-mata**, informe quem venceu nos pênaltis (ou use `--provisorio` para placar parcial 0×0 com jogo em andamento).
 
 O placar é salvo em `resultados.csv`. Formatos aceitos: `2-1`, `2x1`, `2 1`.
 
@@ -159,6 +185,18 @@ Salva o estado atual **antes** de uma rodada começar, para a coluna Rod contar 
 - **13:** importa um CSV de classificação exportado do Excel (atualiza referência e exports).
 
 Use para validar se o programa e a planilha estão alinhados.
+
+### Opção 15 — Pontuação parcial por fase
+
+Mostra e exporta ranking detalhado de uma fase (Placar, Vencedor, Gols casa, Gols fora, Soma):
+
+```bash
+python -m src.cli fase --fase 32avos
+python -m src.cli fase --fase grupos
+python -m src.cli fase --fase grupos_mais_32avos
+```
+
+Arquivos em `data/ultimo/fase_<fase>.png` e `.txt`.
 
 ---
 
@@ -207,13 +245,18 @@ python -m src.cli validar
 # Ver classificação completa no terminal (4 colunas + soma)
 python -m src.cli classificar
 
-# Compartilhar (texto + PNG)
+# Compartilhar (texto + PNG em data/ultimo/)
 python -m src.cli compartilhar
-python -m src.cli compartilhar --jogo 57 58          # + imagem rodada_j57_58.png
+python -m src.cli compartilhar --jogo 73 74          # + rodada.png
 python -m src.cli compartilhar --confirmar-rodada    # fim da rodada
 
+# Pontuação parcial por fase (detalhada)
+python -m src.cli fase --fase 32avos
+python -m src.cli fase --fase grupos_mais_32avos
+
 # Lançar / remover resultado
-python -m src.cli resultado --jogo 61 --placar 2-1
+python -m src.cli resultado --jogo 76 --placar 0-0 --provisorio
+python -m src.cli resultado --jogo 73 --placar 1-1 --penaltis BRA
 python -m src.cli resultado --remover --jogo 61
 python -m src.cli resultado --interativo
 
@@ -231,6 +274,9 @@ python -m src.cli exportar
 python -m src.cli importar-referencia --arquivo "data/classificacao_referencia.csv"
 python -m src.cli conferir
 
+# Importar palpites dos 32 avos (RESPOSTAS → bolao.csv)
+python scripts/import_32avos.py --atualizar
+
 # Importar placares das linhas PLACAR do bolao.csv
 python -m src.cli importar-resultados
 
@@ -247,11 +293,15 @@ python -m src.cli bandeiras --forcar
 
 ## Saídas geradas (imagens)
 
+Todos os PNGs vão para **`data/ultimo/`**. Consulte **`manifest.txt`** para ver o que foi gerado por último.
+
 | Arquivo | Conteúdo |
 |---------|----------|
-| `classificacao_grupo.png` | Tabela preta/branca: posição, nome, **Placar, Venc., G.casa, G.fora**, total (**Pts**), pontos na rodada (**Rod**). |
-| `rodada_j57_58.png` | Classificação + palpites provisórios dos jogos 57 e 58 (quesito + Acertou/Errou vencedor). |
-| `palpites_j57.png` | Só palpites do jogo 57 (com bandeiras). |
+| `classificacao.png` | Prêmio B: posição, nome, Placar, Vencedor, Gols casa, Gols fora, Pts, Rod. |
+| `premio_a.png` | Prêmio A: grupos + cravadura. |
+| `fase_32avos.png` | 32 avos: detalhamento Placar / Vencedor / Gols casa / Gols fora / Soma. |
+| `rodada.png` | Classificação + palpites provisórios dos jogos informados. |
+| `palpites.png` | Palpites de um ou mais jogos (com bandeiras). |
 
 Requer Pillow instalado. Sem Pillow, texto e CSV continuam funcionando.
 
@@ -301,13 +351,17 @@ Cobrem pontuação, ranking, parser da planilha THDFM, snapshot e export de imag
 
 ```
 THDFM-Bolao-Copa-do-Mundo/
-├── data/                  # CSVs, snapshot, PNGs gerados
-├── scripts/               # setup_data, download_bandeiras, reset_bolao
+├── data/                  # CSVs operacionais + flags/
+│   └── ultimo/            # Exports gerados (gitignored; veja manifest.txt)
+├── scripts/               # setup_data, download_bandeiras, import_32avos
 ├── src/
 │   ├── cli.py             # Comandos e menu
 │   ├── menu.py            # Menu interativo
 │   ├── ranking.py         # Classificação e exports
-│   ├── scoring.py         # Regras de pontos
+│   ├── scoring.py         # Regras de pontos (grupos + mata-mata)
+│   ├── exports_manager.py # Pasta data/ultimo/ e limpeza de legados
+│   ├── penaltis.py        # Palpites e resultado nos pênaltis
+│   ├── cravadura.py       # Cravadura congelada
 │   ├── thdfm_parser.py    # Leitura do CSV do Excel
 │   ├── palpites_view.py   # Palpites e modo provisório
 │   ├── image_export.py    # PNGs (classificação e palpites)
