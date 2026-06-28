@@ -123,80 +123,64 @@ O programa classifica cada palpite nas categorias **Placar**, **Gols Casa**, **G
 
 ## Menu interativo (opções)
 
+Ao rodar `python -m src.cli`, o cabeçalho mostra **status ao vivo**: jogos realizados, fase atual, líderes A/B e último export em `data/ultimo/`.
+
 ```
-Dia a dia
-  1. Compartilhar classificacao (+ provisorio opcional)
-  2. Confirmar rodada (fim dos jogos oficiais)
-  3. Lancar placar de um jogo
-  4. Lancar placares (modo interativo)
-  5. Remover placar de jogo(s)
-  6. Ver proximos jogos
-
-Palpites
-  7. Palpites de jogos (imagem simples)
-  8. Palpites provisorios (quesito + vencedor)
-
-Outros
-  9. Classificacao no terminal
- 10. Salvar baseline pre-rodada
- 11. Validar bolao
- 12. Conferir com referencia do Excel
- 13. Importar classificacao do Excel
- 14. Ranking classificacao dos grupos (parcial)
- 15. Pontuacao parcial por fase (detalhada)
-
-Exports atuais: data/ultimo/ (veja manifest.txt)
+ 1. Rodada de hoje (fluxo guiado)
+ 2. Compartilhar (escolher tabelas)
+ 3. Placares        → lançar, remover, próximos
+ 4. Palpites        → imagem simples ou provisório
+ 5. Tabelas         → terminal, fase, grupos, manifest, abrir pasta
+ 6. Ferramentas     → baseline, confirmar rodada, validar, imports, reset
+ 0. Sair
 ```
 
-### Opção 1 — Compartilhar
+**Atalhos:** `r` rodada · `c` compartilhar · `s` status · `u` manifest/pasta ultimo
 
-Gera arquivos em **`data/ultimo/`** e mostra a tabela no terminal.
+### Opção 1 — Rodada de hoje
 
-- **`classificacao.png`**: Pos, Participante, Placar, Vencedor, Gols casa, Gols fora, Pts e Rod (prêmio B).
-- **`premio_a.png`**: tabela A (grupos + cravadura).
-- **`fase_32avos.png`** e **`fase_grupos_mais_32avos.png`**: quando houver jogos J73+ realizados, com detalhamento por coluna de pontuação.
-- **`classificacao.txt`**: texto completo para WhatsApp (versão resumida + tabelas A/B).
-- Se informar IDs de jogos (ex.: `73 74`), gera também **`rodada.png`**: classificação + palpites provisórios desses jogos.
-- A coluna **Rod** mostra quantos pontos cada um ganhou **desde a última baseline** (snapshot). Setas ↑↓ na posição indicam subida ou queda no ranking.
+Fluxo contínuo: baseline opcional → placares interativos → **wizard de compartilhar** → confirmar rodada opcional.
 
-### Opção 2 — Confirmar rodada
+### Opção 2 — Compartilhar (escolher tabelas)
 
-Use **ao final do dia**, quando todos os placares oficiais estiverem corretos. Atualiza `classificacao_snapshot.json` e zera a **Rod** na próxima divulgação (todos começam com Rod = 0 até novos jogos).
+Antes de gerar arquivos, escolha o **pacote de exports**:
 
-### Opções 3 e 4 — Lançar placar
+| Preset | Conteúdo |
+|--------|----------|
+| 1. Completo | Geral + prêmio A + parciais (32 avos / grupos+32 avos) |
+| 2. Geral + parcial + palpites | Como acima, sem A, **com rodada.png** |
+| 3. Geral + parcial | Sem prêmio A |
+| 4. Geral + prêmio A | Sem parciais de mata-mata |
+| 5. Só geral | Apenas prêmio B |
+| 6. Só parcial | Apenas fases disponíveis |
+| 7. Personalizado | Marca item a item (txt, PNGs, rodada) |
 
-- **3:** um jogo por vez (informa ID e placar, ex.: `2-1`).
-- **4:** modo interativo nos jogos pendentes; Enter pula, `sair` encerra.
-- Em **empate no mata-mata**, informe quem venceu nos pênaltis (ou use `--provisorio` para placar parcial 0×0 com jogo em andamento).
+O menu mostra **pré-visualização** do que será salvo em `data/ultimo/` antes de confirmar. Se incluir **rodada.png**, informe os IDs dos jogos com placar provisório (sugestão automática quando possível).
 
-O placar é salvo em `resultados.csv`. Formatos aceitos: `2-1`, `2x1`, `2 1`.
-
-### Opção 5 — Remover placar
-
-Remove resultado de um ou mais jogos (útil para corrigir antes de confirmar a rodada).
-
-### Opção 10 — Baseline pré-rodada
-
-Salva o estado atual **antes** de uma rodada começar, para a coluna Rod contar só os jogos novos do dia. Equivalente a preparar o “ponto de partida” da Rod.
-
-### Opções 12 e 13 — Conferência com Excel
-
-- **12 (`conferir`):** compara o cálculo do programa com `classificacao_referencia.csv`.
-- **13:** importa um CSV de classificação exportado do Excel (atualiza referência e exports).
-
-Use para validar se o programa e a planilha estão alinhados.
-
-### Opção 15 — Pontuação parcial por fase
-
-Mostra e exporta ranking detalhado de uma fase (Placar, Vencedor, Gols casa, Gols fora, Soma):
+Via CLI:
 
 ```bash
-python -m src.cli fase --fase 32avos
-python -m src.cli fase --fase grupos
-python -m src.cli fase --fase grupos_mais_32avos
+python -m src.cli compartilhar --export geral fase_32avos rodada --jogo 73 74
+python -m src.cli confirmar-rodada   # só baseline, sem exports
 ```
 
-Arquivos em `data/ultimo/fase_<fase>.png` e `.txt`.
+### Confirmar rodada (separado do compartilhar)
+
+Em **Ferramentas → 2** ou `python -m src.cli confirmar-rodada`: salva o snapshot e zera a coluna **Rod** na próxima divulgação, **sem** gerar PNGs.
+
+### Submenu Placares
+
+- Lançar um jogo ou em lote (interativo)
+- Remover placar
+- Ver próximos jogos
+- Empate no mata-mata: informe vencedor nos pênaltis (ou placar provisório com Enter)
+
+### Submenu Tabelas
+
+- Classificação geral no terminal
+- Pontuação parcial por fase (menu numerado: grupos, 32 avos, oitavas…)
+- Ranking parcial dos grupos
+- Ver `manifest.txt` ou abrir pasta `data/ultimo/`
 
 ---
 
@@ -245,10 +229,13 @@ python -m src.cli validar
 # Ver classificação completa no terminal (4 colunas + soma)
 python -m src.cli classificar
 
-# Compartilhar (texto + PNG em data/ultimo/)
+# Compartilhar (escolher exports em data/ultimo/)
 python -m src.cli compartilhar
-python -m src.cli compartilhar --jogo 73 74          # + rodada.png
-python -m src.cli compartilhar --confirmar-rodada    # fim da rodada
+python -m src.cli compartilhar --export geral fase_32avos rodada --jogo 73 74
+python -m src.cli compartilhar --confirmar-rodada    # legado: compartilha + confirma
+
+# Confirmar rodada (so baseline, sem exports)
+python -m src.cli confirmar-rodada
 
 # Pontuação parcial por fase (detalhada)
 python -m src.cli fase --fase 32avos
@@ -360,6 +347,7 @@ THDFM-Bolao-Copa-do-Mundo/
 │   ├── ranking.py         # Classificação e exports
 │   ├── scoring.py         # Regras de pontos (grupos + mata-mata)
 │   ├── exports_manager.py # Pasta data/ultimo/ e limpeza de legados
+│   ├── share_options.py   # Presets de export do compartilhar
 │   ├── penaltis.py        # Palpites e resultado nos pênaltis
 │   ├── cravadura.py       # Cravadura congelada
 │   ├── thdfm_parser.py    # Leitura do CSV do Excel

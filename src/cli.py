@@ -58,6 +58,13 @@ from src.exports_manager import (
     formatar_resumo_ultimo,
     limpar_exports_legados,
 )
+from src.share_options import (
+    SelecaoCompartilhar,
+    ajustar_selecao_disponivel,
+    disponibilidade_compartilhar,
+    parse_export_list,
+    selecao_completa,
+)
 from src.thdfm_parser import parse_thdfm_csv
 
 try:
@@ -661,6 +668,57 @@ def _calcular_variacoes_compartilhar(
     return {linha.participante.strip(): None for linha in classificacao}
 
 
+def _resolver_selecao_compartilhar(
+    args: argparse.Namespace,
+    disponivel,
+) -> SelecaoCompartilhar:
+    from dataclasses import replace
+
+    selecao = getattr(args, "selecao", None)
+    export = getattr(args, "export", None)
+    if selecao is not None:
+        base = selecao
+    elif export:
+        base = parse_export_list(export)
+    else:
+        incluir_rodada = bool(getattr(args, "jogo", None))
+        base = selecao_completa(incluir_rodada=incluir_rodada)
+
+    if getattr(args, "sem_arquivo", False):
+        base = replace(base, texto=False)
+    if getattr(args, "sem_png", False):
+        base = replace(
+            base,
+            classificacao_png=False,
+            premio_a_png=False,
+            fase_32avos_png=False,
+            fase_grupos_32avos_png=False,
+            rodada_png=False,
+        )
+    if getattr(args, "jogo", None) and selecao is None and not export:
+        base = replace(base, rodada_png=True)
+    return ajustar_selecao_disponivel(base, disponivel)
+
+
+def cmd_confirmar_rodada(_args: argparse.Namespace) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
+    bolao = carregar_bolao()
+    classificacao = _classificacao_jogos(bolao)
+    realizados = sum(1 for jogo in bolao.jogos if jogo.realizado)
+    jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
+    salvar_snapshot(
+        SNAPSHOT_JSON,
+        classificacao,
+        jogos_realizados=realizados,
+        jogos_ids=jogos_ids,
+    )
+    print(f"Rodada confirmada. Baseline salva em {SNAPSHOT_JSON.name}.")
+    print("Na proxima divulgacao, a coluna Rod comeca zerada.")
+    return 0
+
+
 def cmd_compartilhar(args: argparse.Namespace) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -669,6 +727,13 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
     classificacao = _classificacao_jogos(bolao)
     premio_a, cravadura_ativa = _classificacao_premio_a(bolao)
     classificacao_32avos, classificacao_grupos_32avos = _tabelas_mata_mata(bolao)
+    disponivel = disponibilidade_compartilhar(
+        tem_premio_a=bool(premio_a),
+        classificacao_32avos=classificacao_32avos,
+        classificacao_grupos_32avos=classificacao_grupos_32avos,
+    )
+    selecao = _resolver_selecao_compartilhar(args, disponivel)
+    secoes = selecao.secoes_texto()
     realizados = sum(1 for j in bolao.jogos if j.realizado)
     jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
 
@@ -708,22 +773,44 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
         ids_txt = ", ".join(str(jogo_id) for jogo_id in jogo_ids_export)
         legenda_rodada = f"Rod = pontos nos jogos {ids_txt} desta imagem"
 
-    texto = formatar_classificacao_compartilhar(
-        classificacao,
-        jogos_realizados=realizados,
-        total_jogos=len(bolao.jogos),
-        variacoes=variacoes,
-        mudancas_posicao=mudancas_posicao,
-        jogos_novos=jogos_novos or None,
-        legenda_rodada=legenda_rodada,
-        premio_a=premio_a,
-        cravadura_ativa=cravadura_ativa,
-        classificacao_32avos=classificacao_32avos,
-        classificacao_grupos_32avos=classificacao_grupos_32avos,
-    )
-    print(texto)
+    if not selecao.algum_export():
+        print("Nenhum export selecionado.", file=sys.stderr)
+        return 1
 
-    if not args.sem_arquivo:
+    jogo_ids = jogo_ids_export if jogo_ids_export else getattr(args, "jogo", None)
+    if selecao.rodada_png and not jogo_ids:
+        print(
+            "Export rodada.png requer jogos com placar provisorio (informe IDs).",
+            file=sys.stderr,
+        )
+        return 1
+
+    if (
+        selecao.texto
+        or secoes.classificacao_geral
+        or secoes.premio_a
+        or secoes.fase_32avos
+        or secoes.fase_grupos_32avos
+    ):
+        texto = formatar_classificacao_compartilhar(
+            classificacao,
+            jogos_realizados=realizados,
+            total_jogos=len(bolao.jogos),
+            variacoes=variacoes,
+            mudancas_posicao=mudancas_posicao,
+            jogos_novos=jogos_novos or None,
+            legenda_rodada=legenda_rodada,
+            premio_a=premio_a,
+            cravadura_ativa=cravadura_ativa,
+            classificacao_32avos=classificacao_32avos,
+            classificacao_grupos_32avos=classificacao_grupos_32avos,
+            secoes=secoes,
+        )
+        print(texto)
+    else:
+        print("Gerando exports selecionados (sem texto completo no terminal).")
+
+    if selecao.texto and not args.sem_arquivo:
         exportar_classificacao_texto(
             classificacao,
             CLASSIFICACAO_TXT,
@@ -737,56 +824,67 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
             cravadura_ativa=cravadura_ativa,
             classificacao_32avos=classificacao_32avos,
             classificacao_grupos_32avos=classificacao_grupos_32avos,
+            secoes=secoes,
         )
         print(f"\nTexto salvo em {CLASSIFICACAO_TXT}")
 
-    if not args.sem_png:
+    precisa_png = (
+        selecao.classificacao_png
+        or selecao.premio_a_png
+        or selecao.fase_32avos_png
+        or selecao.fase_grupos_32avos_png
+        or selecao.rodada_png
+    )
+    if not args.sem_png and precisa_png:
         if not _PNG_DISPONIVEL:
             print(
                 "PNG nao gerado: instale Pillow com 'pip install pillow' e rode de novo.",
                 file=sys.stderr,
             )
         else:
-            exportar_classificacao_png(
-                classificacao,
-                CLASSIFICACAO_PNG,
-                jogos_realizados=realizados,
-                total_jogos=len(bolao.jogos),
-                variacoes=variacoes,
-                mudancas_posicao=mudancas_posicao,
-                jogos_novos=jogos_novos or None,
-            )
-            print(f"Imagem salva em {CLASSIFICACAO_PNG}")
-            exportar_premio_a_png(
-                premio_a,
-                CLASSIFICACAO_PREMIO_A_PNG,
-                cravadura_ativa=cravadura_ativa,
-            )
-            print(f"Imagem salva em {CLASSIFICACAO_PREMIO_A_PNG}")
-        if classificacao_32avos is not None:
-            _exportar_png_fase(bolao, "32avos", CLASSIFICACAO_32AVOS_PNG)
-            print(f"Imagem salva em {CLASSIFICACAO_32AVOS_PNG}")
-        if classificacao_grupos_32avos is not None:
-            _exportar_png_fase(bolao, "grupos_mais_32avos", CLASSIFICACAO_GRUPOS_32AVOS_PNG)
-            print(f"Imagem salva em {CLASSIFICACAO_GRUPOS_32AVOS_PNG}")
+            if selecao.classificacao_png:
+                exportar_classificacao_png(
+                    classificacao,
+                    CLASSIFICACAO_PNG,
+                    jogos_realizados=realizados,
+                    total_jogos=len(bolao.jogos),
+                    variacoes=variacoes,
+                    mudancas_posicao=mudancas_posicao,
+                    jogos_novos=jogos_novos or None,
+                )
+                print(f"Imagem salva em {CLASSIFICACAO_PNG}")
+            if selecao.premio_a_png:
+                exportar_premio_a_png(
+                    premio_a,
+                    CLASSIFICACAO_PREMIO_A_PNG,
+                    cravadura_ativa=cravadura_ativa,
+                )
+                print(f"Imagem salva em {CLASSIFICACAO_PREMIO_A_PNG}")
+            if selecao.fase_32avos_png and classificacao_32avos is not None:
+                _exportar_png_fase(bolao, "32avos", CLASSIFICACAO_32AVOS_PNG)
+                print(f"Imagem salva em {CLASSIFICACAO_32AVOS_PNG}")
+            if selecao.fase_grupos_32avos_png and classificacao_grupos_32avos is not None:
+                _exportar_png_fase(bolao, "grupos_mais_32avos", CLASSIFICACAO_GRUPOS_32AVOS_PNG)
+                print(f"Imagem salva em {CLASSIFICACAO_GRUPOS_32AVOS_PNG}")
 
     descricoes_exports: dict[str, str] = {}
-    if not args.sem_arquivo:
+    if selecao.texto:
         descricoes_exports["classificacao_txt"] = "Texto completo para compartilhar"
-    if not args.sem_png:
+    if selecao.classificacao_png:
         descricoes_exports["classificacao_png"] = "Classificacao geral (premio B)"
+    if selecao.premio_a_png:
         descricoes_exports["premio_a_png"] = "Cravadura + palpitadura dos grupos"
-        if classificacao_32avos is not None:
-            descricoes_exports["fase_32avos_png"] = (
-                "Pontuacao parcial 32 avos (Placar/Vencedor/Gols/Soma)"
-            )
-        if classificacao_grupos_32avos is not None:
-            descricoes_exports["fase_grupos_32avos_png"] = (
-                "Pontuacao parcial grupos + 32 avos (detalhada)"
-            )
+    if selecao.fase_32avos_png and classificacao_32avos is not None:
+        descricoes_exports["fase_32avos_png"] = (
+            "Pontuacao parcial 32 avos (Placar/Vencedor/Gols/Soma)"
+        )
+    if selecao.fase_grupos_32avos_png and classificacao_grupos_32avos is not None:
+        descricoes_exports["fase_grupos_32avos_png"] = (
+            "Pontuacao parcial grupos + 32 avos (detalhada)"
+        )
 
     jogo_ids = jogo_ids_export if jogo_ids_export else getattr(args, "jogo", None)
-    if jogo_ids and not args.sem_png:
+    if selecao.rodada_png and jogo_ids and not args.sem_png:
         if not _PNG_DISPONIVEL:
             print(
                 "Imagem completa nao gerada: instale Pillow com 'pip install pillow'.",
@@ -1140,7 +1238,22 @@ def main(argv: list[str] | None = None) -> int:
         metavar="N",
         help="Usa os ultimos N jogos novos (ou com placar) na imagem completa (ex: --ultimos 2)",
     )
+    p_compartilhar.add_argument(
+        "--export",
+        nargs="+",
+        metavar="ITEM",
+        help=(
+            "Exports: geral, premio_a, fase_32avos, fase_grupos_32avos, "
+            "rodada, txt, completo (padrao: tudo)"
+        ),
+    )
     p_compartilhar.set_defaults(func=cmd_compartilhar)
+
+    p_confirmar = subparsers.add_parser(
+        "confirmar-rodada",
+        help="Salva baseline da coluna Rod (sem gerar exports)",
+    )
+    p_confirmar.set_defaults(func=cmd_confirmar_rodada)
 
     p_baseline = subparsers.add_parser(
         "baseline",

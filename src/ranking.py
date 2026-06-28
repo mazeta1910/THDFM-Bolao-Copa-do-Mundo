@@ -8,6 +8,7 @@ from src.cravadura import pontos_cravadura_por_participante
 from src.grupos_ranking import pontos_grupos_por_participante
 from src.models import BolaoData, ClassificacaoLinha, ClassificacaoPremioLinha, Jogo, Palpite, PontosJogo, PontosParticipante
 from src.scoring import FASE_GRUPOS_MAX, DECIMA_SEXTAS_MAX, pontos_detalhados
+from src.share_options import SecoesTextoCompartilhar
 from src.snapshot import formatar_posicao_com_mudanca, formatar_variacao
 
 
@@ -527,7 +528,12 @@ def formatar_classificacao_compartilhar(
     cravadura_ativa: bool = False,
     classificacao_32avos: list[ClassificacaoLinha] | None = None,
     classificacao_grupos_32avos: list[ClassificacaoLinha] | None = None,
+    secoes: SecoesTextoCompartilhar | None = None,
 ) -> str:
+    if secoes is None:
+        from src.share_options import SecoesTextoCompartilhar as _Secoes
+
+        secoes = _Secoes()
     linhas = [
         "CLASSIFICADURA BOLAO - COPA DO MUNDO 2026",
         f"Atualizada apos {jogos_realizados} de {total_jogos} jogos",
@@ -535,23 +541,24 @@ def formatar_classificacao_compartilhar(
     if jogos_novos:
         for texto in jogos_novos[:5]:
             linhas.append(texto)
-    linhas.extend(
-        formatar_tabela_jogos(
-            classificacao,
-            variacoes=variacoes,
-            mudancas_posicao=mudancas_posicao,
+    if secoes.classificacao_geral:
+        linhas.extend(
+            formatar_tabela_jogos(
+                classificacao,
+                variacoes=variacoes,
+                mudancas_posicao=mudancas_posicao,
+            )
         )
-    )
-    if premio_a:
+    if secoes.premio_a and premio_a:
         linhas.extend(formatar_tabela_premio_a(premio_a, cravadura_ativa=cravadura_ativa))
-    if classificacao_32avos is not None:
+    if secoes.fase_32avos and classificacao_32avos is not None:
         linhas.extend(
             formatar_tabela_jogos_resumida(
                 "32 AVOS DE FINAL (J73-J88)",
                 classificacao_32avos,
             )
         )
-    if classificacao_grupos_32avos is not None:
+    if secoes.fase_grupos_32avos and classificacao_grupos_32avos is not None:
         linhas.extend(
             formatar_tabela_jogos_resumida(
                 "FASE DE GRUPOS + 32 AVOS (J1-J88)",
@@ -586,6 +593,7 @@ def exportar_classificacao_texto(
     cravadura_ativa: bool = False,
     classificacao_32avos: list[ClassificacaoLinha] | None = None,
     classificacao_grupos_32avos: list[ClassificacaoLinha] | None = None,
+    secoes: SecoesTextoCompartilhar | None = None,
 ) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -601,6 +609,7 @@ def exportar_classificacao_texto(
         cravadura_ativa=cravadura_ativa,
         classificacao_32avos=classificacao_32avos,
         classificacao_grupos_32avos=classificacao_grupos_32avos,
+        secoes=secoes,
     )
     path.write_text(texto + "\n", encoding="utf-8")
 
