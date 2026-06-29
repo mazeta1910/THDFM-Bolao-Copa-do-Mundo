@@ -34,6 +34,18 @@ class TestImageExport(unittest.TestCase):
         self.assertEqual(combinada.getpixel((50, 40)), (10, 10, 10))
         self.assertEqual(combinada.getpixel((200, 60)), (20, 20, 20))
 
+    def test_combinar_imagens_horizontal_alinhar_topo(self):
+        esquerda = Image.new("RGB", (100, 80), (10, 10, 10))
+        direita = Image.new("RGB", (200, 120), (20, 20, 20))
+        combinada = combinar_imagens_horizontal(
+            [esquerda, direita],
+            espaco=20,
+            alinhar_topo=True,
+        )
+
+        self.assertEqual(combinada.getpixel((50, 10)), (10, 10, 10))
+        self.assertEqual(combinada.getpixel((200, 10)), (20, 20, 20))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,12 +13,14 @@ from src.scoring import fase_jogo
 from src.share_options import (
     SelecaoCompartilhar,
     ajustar_selecao_disponivel,
+    caminho_menu_export,
     descrever_exports,
     disponibilidade_compartilhar,
     selecao_completa,
     selecao_geral_parcial,
     selecao_geral_parcial_palpites,
     selecao_geral_premio_a,
+    selecao_rodada_whatsapp,
     selecao_so_geral,
     selecao_so_parcial,
 )
@@ -396,46 +398,90 @@ def _selecao_personalizada(disponivel) -> SelecaoCompartilhar:
     return ajustar_selecao_disponivel(selecao, disponivel)
 
 
+def _breadcrumb(*partes: str) -> None:
+    print("\n" + " > ".join(["Menu", *partes]))
+
+
+def _nome_arquivo_export(item: str) -> str:
+    return item.split(" — ", 1)[0].strip()
+
+
+def _imprimir_dica_palpites_somente() -> None:
+    print("\nQuer SOMENTE a tabela de palpites (sem ranking)?")
+    print("  Menu > Palpites > 2. Exportar palpites provisorios")
+    print("  (gera palpites_provisorios.png em data/ultimo/)")
+
+
+def _imprimir_preview_exports(
+    selecao: SelecaoCompartilhar,
+    *,
+    jogos_rodada: list[int] | None,
+    disponivel,
+    breadcrumb: tuple[str, ...] | None = None,
+) -> None:
+    itens = descrever_exports(
+        selecao,
+        jogos_rodada=jogos_rodada,
+        disponivel=disponivel,
+        legivel=True,
+    )
+    if breadcrumb:
+        _breadcrumb(*breadcrumb)
+    print("\nArquivos que serao gerados em data/ultimo/:")
+    for item in itens:
+        print(f"  • {item}")
+    if itens:
+        print("\nComo gerar cada um depois (pelo menu):")
+        for item in itens:
+            nome = _nome_arquivo_export(item)
+            print(f"  • {nome}: {caminho_menu_export(nome)}")
+    if selecao.rodada_png:
+        print("\nrodada.png = ranking (esquerda) + palpites provisorios (direita) na mesma imagem.")
+        _imprimir_dica_palpites_somente()
+
+
 def _escolher_preset_compartilhar(
     disponivel,
     *,
     modo_rodada: bool = False,
 ) -> SelecaoCompartilhar | None:
     if modo_rodada:
-        print("\n--- Passo 2/2: Compartilhar no grupo ---")
-        print("Pacotes mais usados:")
-        print(" 1. Classificacao + parcial + palpites do jogo  [padrao]")
-        print(" 2. So classificacao geral (premio B)")
-        print(" 3. Completo (geral + premio A + parciais)")
-        print(" 4. Mais opcoes...")
-        print(" 0. Cancelar")
-        op = _ler_opcao_numerica("Escolha [1]: ", padrao="1")
-        if op is None:
-            return None
-        if op == "4":
-            return _escolher_preset_compartilhar_completo(disponivel)
-        mapa = {
-            "1": selecao_geral_parcial_palpites(),
-            "2": selecao_so_geral(),
-            "3": selecao_completa(),
-        }
-        if op not in mapa:
-            print("Opcao invalida.")
-            return None
-        return ajustar_selecao_disponivel(mapa[op], disponivel)
+        return None  # fluxo da rodada trata fora
 
-    return _escolher_preset_compartilhar_completo(disponivel)
+    print("\nO que gerar?")
+    _breadcrumb("Compartilhar")
+    print(" 1. Tudo (ranking + grupos/cravadura + 32 avos, se houver)")
+    print(" 2. Rodada ao vivo (ranking + 32 avos + imagem com palpites)")
+    print(" 3. So ranking geral")
+    print(" 4. Escolher arquivo por arquivo...")
+    print(" 0. Cancelar")
+
+    op = _ler_opcao_numerica("Escolha [1]: ", padrao="1")
+    if op is None:
+        return None
+
+    mapa = {
+        "1": selecao_completa(),
+        "2": selecao_geral_parcial_palpites(),
+        "3": selecao_so_geral(),
+    }
+    if op == "4":
+        return _escolher_preset_compartilhar_completo(disponivel)
+    if op not in mapa:
+        print("Opcao invalida.")
+        return None
+    return ajustar_selecao_disponivel(mapa[op], disponivel)
 
 
 def _escolher_preset_compartilhar_completo(disponivel) -> SelecaoCompartilhar | None:
-    print("\nO que exportar?")
-    print(" 1. Completo (geral + A + parciais)")
-    print(" 2. Geral + parcial + palpites (rodada)")
-    print(" 3. Geral + parcial")
-    print(" 4. Geral + premio A")
-    print(" 5. So tabela geral (premio B)")
-    print(" 6. So pontuacao parcial")
-    print(" 7. Personalizado")
+    print("\nEscolha arquivo por arquivo:")
+    print(" 1. Tudo")
+    print(" 2. Ranking + 32 avos + palpites na imagem rodada")
+    print(" 3. Ranking + 32 avos (sem imagem de palpites)")
+    print(" 4. Ranking + tabela dos grupos")
+    print(" 5. So ranking geral")
+    print(" 6. So pontuacao dos 32 avos")
+    print(" 7. Personalizado (marca um a um)")
     print(" 0. Voltar / cancelar")
 
     op = _ler_opcao_numerica("Escolha [1]: ", padrao="1")
@@ -458,6 +504,81 @@ def _escolher_preset_compartilhar_completo(disponivel) -> SelecaoCompartilhar | 
     return ajustar_selecao_disponivel(presets[op], disponivel)
 
 
+def _configurar_exports_rodada(disponivel) -> tuple[SelecaoCompartilhar | None, list[int] | None]:
+    """Fluxo enxuto do passo 2 da rodada de hoje."""
+    from src.cli import _carregar_baseline_variacao
+
+    bolao = _carregar_bolao()
+    _, baseline_ids, _ = _carregar_baseline_variacao()
+    sugeridos = sugerir_jogos_provisorios(bolao, baseline_ids, limite=2)
+    jogos: list[int] | None = list(sugeridos) if sugeridos else None
+
+    _breadcrumb("Rodada de hoje", "Passo 2/2 — Divulgar no grupo")
+    print("\nO que mandar no WhatsApp?")
+    print(" 1. Ranking + palpites do jogo (recomendado)")
+    print(" 2. So ranking geral")
+    print(" 3. Mais arquivos (32 avos, premio A, etc.)")
+    print(" 0. Cancelar")
+
+    op = _ler_opcao_numerica("Escolha [1]: ", padrao="1")
+    if op is None or op == "0":
+        return None, None
+
+    if op == "1":
+        selecao = ajustar_selecao_disponivel(selecao_rodada_whatsapp(), disponivel)
+        if sugeridos:
+            sugestao = " ".join(str(jogo_id) for jogo_id in sugeridos)
+            mensagem = (
+                "\nQual jogo entra na imagem rodada.png? "
+                f"[Enter = {sugestao} | - = sem palpites na imagem]: "
+            )
+        else:
+            mensagem = "\nQual jogo entra na imagem rodada.png? (- = sem palpites): "
+        escolhidos = _ler_jogos(mensagem, opcional=True, padrao=sugeridos or None)
+        if escolhidos is None:
+            return None, None
+        if not escolhidos:
+            selecao = replace(selecao, rodada_png=False)
+            jogos = None
+        else:
+            jogos = escolhidos
+    elif op == "2":
+        selecao = ajustar_selecao_disponivel(selecao_so_geral(), disponivel)
+        jogos = None
+    elif op == "3":
+        selecao = _escolher_preset_compartilhar_completo(disponivel)
+        if selecao is None:
+            return None, None
+        if selecao.rodada_png and not jogos:
+            if sugeridos:
+                sugestao = " ".join(str(jogo_id) for jogo_id in sugeridos)
+                mensagem = (
+                    "\nQual jogo entra na imagem rodada.png? "
+                    f"[Enter = {sugestao} | - = sem palpites]: "
+                )
+            else:
+                mensagem = "\nQual jogo entra na imagem rodada.png? (- = sem palpites): "
+            escolhidos = _ler_jogos(mensagem, opcional=True, padrao=sugeridos or None)
+            if escolhidos is None:
+                return None, None
+            if not escolhidos:
+                selecao = replace(selecao, rodada_png=False)
+                jogos = None
+            else:
+                jogos = escolhidos
+    else:
+        print("Opcao invalida.")
+        return None, None
+
+    _imprimir_preview_exports(
+        selecao,
+        jogos_rodada=jogos,
+        disponivel=disponivel,
+        breadcrumb=("Rodada de hoje", "Passo 2/2 — Divulgar no grupo"),
+    )
+    return selecao, jogos
+
+
 def _wizard_compartilhar(
     *,
     jogos_preset: list[int] | None = None,
@@ -466,40 +587,48 @@ def _wizard_compartilhar(
     from src.cli import _carregar_baseline_variacao, cmd_compartilhar
 
     disponivel = _disponibilidade_atual()
-    selecao = _escolher_preset_compartilhar(disponivel, modo_rodada=modo_rodada)
-    if selecao is None:
-        return False
-
-    bolao = _carregar_bolao()
     jogos = list(jogos_preset) if jogos_preset else None
-    if selecao.rodada_png and not jogos:
-        _, baseline_ids, _ = _carregar_baseline_variacao()
-        sugeridos = sugerir_jogos_provisorios(bolao, baseline_ids, limite=2)
-        if sugeridos:
-            sugestao = " ".join(str(jogo_id) for jogo_id in sugeridos)
-            mensagem = (
-                "Jogos com placar provisorio para rodada.png "
-                f"[Enter = {sugestao} | - = sem palpites]: "
-            )
-        else:
-            mensagem = "IDs dos jogos para rodada.png (- = sem palpites): "
-        jogos = _ler_jogos(mensagem, opcional=True, padrao=sugeridos or None)
-        if jogos is None:
+
+    if modo_rodada and jogos_preset is None:
+        selecao, jogos = _configurar_exports_rodada(disponivel)
+        if selecao is None:
             return False
-        if not jogos:
-            selecao = replace(selecao, rodada_png=False)
-            print("  (rodada.png omitida)")
+    else:
+        selecao = _escolher_preset_compartilhar(disponivel, modo_rodada=False)
+        if selecao is None:
+            return False
+
+        if selecao.rodada_png and not jogos:
+            bolao = _carregar_bolao()
+            _, baseline_ids, _ = _carregar_baseline_variacao()
+            sugeridos = sugerir_jogos_provisorios(bolao, baseline_ids, limite=2)
+            if sugeridos:
+                sugestao = " ".join(str(jogo_id) for jogo_id in sugeridos)
+                mensagem = (
+                    "\nJogo(s) na imagem com palpites "
+                    f"[Enter = {sugestao} | - = sem imagem]: "
+                )
+            else:
+                mensagem = "\nJogo(s) na imagem com palpites (- = sem imagem): "
+            jogos = _ler_jogos(mensagem, opcional=True, padrao=sugeridos or None)
+            if jogos is None:
+                return False
+            if not jogos:
+                selecao = replace(selecao, rodada_png=False)
+
+        _imprimir_preview_exports(
+            selecao,
+            jogos_rodada=jogos,
+            disponivel=disponivel,
+            breadcrumb=("Compartilhar",),
+        )
 
     itens = descrever_exports(selecao, jogos_rodada=jogos, disponivel=disponivel)
     if not itens:
-        print("Nenhum export disponivel com esta selecao.")
+        print("Nenhum arquivo selecionado.")
         return False
 
-    print("\nArquivos em data/ultimo/:")
-    for item in itens:
-        print(f"  • {item}")
-
-    confirmacao = _confirmar("Gerar agora?", padrao=True)
+    confirmacao = _confirmar("\nGerar agora?", padrao=True)
     if confirmacao is None:
         return False
     if not confirmacao:
@@ -523,12 +652,12 @@ def _wizard_compartilhar(
 def _fluxo_rodada_hoje() -> None:
     from src.cli import cmd_confirmar_rodada, cmd_resultado
 
-    print("\n=== Rodada de hoje ===")
-    print("Fluxo: placares (opcional) -> compartilhar -> confirmar rodada (opcional)")
-    print("(Baseline pre-rodada: menu Ferramentas -> 1)\n")
+    _breadcrumb("Rodada de hoje")
+    print("\nFluxo: placares (opcional) -> compartilhar -> confirmar rodada (opcional)")
+    print("(Baseline pre-rodada: Menu > Ferramentas > 1)\n")
     _imprimir_contexto_jogos(pendentes=True, limite_pendentes=5)
 
-    print("--- Passo 1/2: Placares ---")
+    _breadcrumb("Rodada de hoje", "Passo 1/2 — Placares")
     print(" 1. Lancar placares agora (interativo)")
     print(" 2. Pular")
     passo = _ler_opcao_numerica("Escolha [2]: ", padrao="2")
@@ -643,9 +772,9 @@ def _submenu_palpites() -> None:
     from src.cli import cmd_palpites
 
     while True:
-        print("\n--- Palpites ---")
-        print(" 1. Exportar palpites (imagem simples)")
-        print(" 2. Exportar palpites provisorios (quesito + vencedor)")
+        _breadcrumb("Palpites")
+        print("\n 1. Exportar palpites (imagem simples → palpites.png)")
+        print(" 2. Exportar palpites provisorios (quesito + vencedor → palpites_provisorios.png)")
         print(" 0. Voltar")
 
         escolha = _ler_linha("Opcao: ")

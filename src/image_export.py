@@ -59,6 +59,9 @@ def _carregar_fontes():
 
     tamanhos = {
         "titulo": 26,
+        "secao": 20,
+        "secao_grande": 24,
+        "secao_menor": 15,
         "sub": 15,
         "cab": 14,
         "linha": 15,
@@ -88,11 +91,15 @@ def _carregar_fontes():
 
     return {
         "titulo": fonte(True, tamanhos["titulo"]),
+        "secao": fonte(True, tamanhos["secao"]),
+        "secao_grande": fonte(True, tamanhos["secao_grande"]),
+        "secao_menor": fonte(True, tamanhos["secao_menor"]),
         "sub": fonte(False, tamanhos["sub"]),
         "cab": fonte(True, tamanhos["cab"]),
         "linha": fonte(False, tamanhos["linha"]),
         "var": fonte(True, tamanhos["var"]),
         "confronto": fonte(False, 16),
+        "crumb": fonte(False, 12),
     }
 
 
@@ -278,8 +285,12 @@ def renderizar_classificacao_png(
     jogos_novos: list[str] | None = None,
     titulo: str = "B) RESULTADOS DOS JOGOS",
     rodape: str | None = None,
+    omitir_rodape: bool = False,
     mostrar_rod: bool = True,
     rotulo_soma: str = "Pts",
+    margem_superior: int = MARGEM,
+    fonte_titulo: str = "sub",
+    altura_titulo: int = 28,
 ):
     from PIL import Image, ImageDraw
 
@@ -294,27 +305,27 @@ def renderizar_classificacao_png(
         linhas_jogos = min(len(jogos_novos), 3)
 
     altura = (
-        MARGEM
-        + 28
+        margem_superior
+        + altura_titulo
         + linhas_jogos * 22
         + (4 if linhas_jogos else 0)
         + ALTURA_TITULO_TABELA
         + ALTURA_LINHA * len(classificacao)
-        + ALTURA_RODAPE
+        + (0 if omitir_rodape else ALTURA_RODAPE)
         + MARGEM
     )
 
     imagem = Image.new("RGB", (largura, altura), PAL_FUNDO)
     draw = ImageDraw.Draw(imagem)
 
-    y = MARGEM
+    y = margem_superior
     draw.text(
         (MARGEM, y),
         titulo,
-        font=fontes["sub"],
+        font=fontes[fonte_titulo],
         fill=PAL_TITULO_LARANJA,
     )
-    y += 28
+    y += altura_titulo
     if jogos_novos:
         for texto in jogos_novos[:3]:
             draw.text((MARGEM, y), texto, font=fontes["sub"], fill=PAL_TEXTO_SUAVE)
@@ -439,15 +450,20 @@ def renderizar_classificacao_png(
             )
         y += ALTURA_LINHA
 
-    texto_rodape = rodape or "Premio B: metade do premio | Rod = jogos novos | Mata-mata conforme fase"
-    draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_RODAPE), fill=PAL_FUNDO)
-    draw.text(
-        (MARGEM + 8, y + ALTURA_RODAPE // 2),
-        texto_rodape,
-        font=fontes["sub"],
-        fill=PAL_TEXTO_SUAVE,
-        anchor="lm",
-    )
+    if not omitir_rodape:
+        texto_rodape = (
+            rodape
+            if rodape is not None
+            else "Premio B: metade do premio | Rod = jogos novos | Mata-mata conforme fase"
+        )
+        draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_RODAPE), fill=PAL_FUNDO)
+        draw.text(
+            (MARGEM + 8, y + ALTURA_RODAPE // 2),
+            texto_rodape,
+            font=fontes["sub"],
+            fill=PAL_TEXTO_SUAVE,
+            anchor="lm",
+        )
 
     return imagem
 
@@ -1103,7 +1119,12 @@ def exportar_palpites_provisorios_png(blocos, path: str | Path) -> None:
     imagem.save(path, format="PNG")
 
 
-def renderizar_palpites_provisorios_png(blocos):
+def renderizar_palpites_provisorios_png(
+    blocos,
+    *,
+    mesclar_titulo_jogo: bool = False,
+    margem_superior: int = MARGEM,
+):
     from PIL import Image, ImageDraw
 
     from src.bandeiras import titulo_jogo_bandeiras
@@ -1134,10 +1155,11 @@ def renderizar_palpites_provisorios_png(blocos):
         + largura_pts
     )
 
-    altura_bandeiras = ALTURA_BANDEIRA + 10
-    altura_titulos_jogos = 22 + altura_bandeiras
+    altura_bandeiras = ALTURA_BANDEIRA + 6
+    altura_cabecalho_jogo = 22
+    altura_titulos_jogos = altura_cabecalho_jogo + altura_bandeiras
     altura = (
-        MARGEM
+        margem_superior
         + altura_titulos_jogos
         + ALTURA_TITULO_TABELA
         + ALTURA_LINHA
@@ -1147,16 +1169,23 @@ def renderizar_palpites_provisorios_png(blocos):
 
     imagem = Image.new("RGB", (largura, altura), PAL_FUNDO)
     draw = ImageDraw.Draw(imagem)
-    y = MARGEM
+    y = margem_superior
 
     for bloco, layout in zip(realizados, layouts):
-        titulo, _ = titulo_jogo_bandeiras(bloco.jogo.id, bloco.jogo.casa, bloco.jogo.fora)
         centro = layout.x + layout.largura // 2
-        draw.text((centro, y), titulo, font=fontes["sub"], fill=PAL_TEXTO_SUAVE, anchor="mm")
+        if mesclar_titulo_jogo:
+            titulo = f"Palpites provisórios — Jogo {bloco.jogo.id}"
+            cor_titulo = PAL_TITULO_LARANJA
+            fonte_titulo = fontes["secao_menor"]
+        else:
+            titulo, _ = titulo_jogo_bandeiras(bloco.jogo.id, bloco.jogo.casa, bloco.jogo.fora)
+            cor_titulo = PAL_TEXTO_SUAVE
+            fonte_titulo = fontes["sub"]
+        draw.text((centro, y), titulo, font=fonte_titulo, fill=cor_titulo, anchor="mm")
         colar_confronto(
             imagem,
             centro,
-            y + 22 + ALTURA_BANDEIRA // 2,
+            y + altura_cabecalho_jogo + ALTURA_BANDEIRA // 2,
             bloco.jogo.casa,
             bloco.jogo.fora,
             fonte_x=fontes["confronto"],
@@ -1233,7 +1262,12 @@ def renderizar_palpites_provisorios_png(blocos):
 
 
 
-def combinar_imagens_horizontal(imagens: list, *, espaco: int = ESPACO_ENTRE_SECOES):
+def combinar_imagens_horizontal(
+    imagens: list,
+    *,
+    espaco: int = ESPACO_ENTRE_SECOES,
+    alinhar_topo: bool = False,
+):
     from PIL import Image
 
     if not imagens:
@@ -1244,12 +1278,34 @@ def combinar_imagens_horizontal(imagens: list, *, espaco: int = ESPACO_ENTRE_SEC
     canvas = Image.new("RGB", (largura, altura), PAL_FUNDO)
     x = 0
     for indice, imagem in enumerate(imagens):
-        y = (altura - imagem.height) // 2
+        y = 0 if alinhar_topo else (altura - imagem.height) // 2
         canvas.paste(imagem, (x, y))
         x += imagem.width
         if indice < len(imagens) - 1:
             x += espaco
     return canvas
+
+
+def _adicionar_breadcrumb(imagem, texto: str):
+    from PIL import Image, ImageDraw
+
+    faixa = 14
+    fontes = _carregar_fontes()
+    nova = Image.new("RGB", (imagem.width, imagem.height + faixa), PAL_FUNDO)
+    nova.paste(imagem, (0, faixa))
+    draw = ImageDraw.Draw(nova)
+    draw.text(
+        (MARGEM, faixa - 1),
+        texto,
+        font=fontes["crumb"],
+        fill=PAL_TEXTO_SUAVE,
+        anchor="lb",
+    )
+    return nova
+
+
+_MARGEM_RODADA = 4
+_ALTURA_TITULO_RODADA = 34
 
 
 def exportar_rodada_completa_png(
@@ -1262,8 +1318,11 @@ def exportar_rodada_completa_png(
     variacoes: dict[str, int | None],
     mudancas_posicao: dict[str, int | None],
     jogos_novos: list[str] | None = None,
+    breadcrumb: str | None = None,
 ) -> None:
-    """Classificacao dos jogos + palpites provisorios (sem tabelas extras)."""
+    """Classificação geral + palpites provisórios lado a lado."""
+    from src.share_options import BREADCRUMB_RODADA_PNG
+
     imagem_classificacao = renderizar_classificacao_png(
         classificacao,
         jogos_realizados=jogos_realizados,
@@ -1271,9 +1330,23 @@ def exportar_rodada_completa_png(
         variacoes=variacoes,
         mudancas_posicao=mudancas_posicao,
         jogos_novos=jogos_novos,
+        titulo="CLASSIFICAÇÃO GERAL",
+        omitir_rodape=True,
+        margem_superior=_MARGEM_RODADA,
+        fonte_titulo="secao_grande",
+        altura_titulo=_ALTURA_TITULO_RODADA,
     )
-    imagem_provisorio = renderizar_palpites_provisorios_png(blocos)
-    combinada = combinar_imagens_horizontal([imagem_classificacao, imagem_provisorio])
+    imagem_provisorio = renderizar_palpites_provisorios_png(
+        blocos,
+        mesclar_titulo_jogo=True,
+        margem_superior=_MARGEM_RODADA,
+    )
+    combinada = combinar_imagens_horizontal(
+        [imagem_classificacao, imagem_provisorio],
+        espaco=20,
+        alinhar_topo=True,
+    )
+    combinada = _adicionar_breadcrumb(combinada, breadcrumb or BREADCRUMB_RODADA_PNG)
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     combinada.save(path, format="PNG")

@@ -67,6 +67,16 @@ def disponibilidade_compartilhar(
     )
 
 
+def selecao_rodada_whatsapp() -> SelecaoCompartilhar:
+    """Pacote tipico da rodada: ranking + imagem combinada, sem tabelas extras."""
+    return SelecaoCompartilhar(
+        premio_a_png=False,
+        fase_32avos_png=False,
+        fase_grupos_32avos_png=False,
+        rodada_png=True,
+    )
+
+
 def selecao_completa(*, incluir_rodada: bool = False) -> SelecaoCompartilhar:
     return SelecaoCompartilhar(rodada_png=incluir_rodada)
 
@@ -146,23 +156,70 @@ def descrever_exports(
     *,
     jogos_rodada: list[int] | None = None,
     disponivel: DisponibilidadeCompartilhar | None = None,
+    legivel: bool = False,
 ) -> list[str]:
     selecao = ajustar_selecao_disponivel(selecao, disponivel) if disponivel else selecao
     itens: list[str] = []
     if selecao.texto:
-        itens.append("classificacao.txt")
+        itens.append(
+            "classificacao.txt — texto para WhatsApp"
+            if legivel
+            else "classificacao.txt"
+        )
     if selecao.classificacao_png:
-        itens.append("classificacao.png (premio B)")
+        itens.append(
+            "classificacao.png — ranking geral"
+            if legivel
+            else "classificacao.png (premio B)"
+        )
     if selecao.premio_a_png:
-        itens.append("premio_a.png")
+        itens.append(
+            "premio_a.png — tabela dos grupos + cravadura"
+            if legivel
+            else "premio_a.png"
+        )
     if selecao.fase_32avos_png:
-        itens.append("fase_32avos.png")
+        itens.append(
+            "fase_32avos.png — pontos nos 32 avos"
+            if legivel
+            else "fase_32avos.png"
+        )
     if selecao.fase_grupos_32avos_png:
-        itens.append("fase_grupos_mais_32avos.png")
+        itens.append(
+            "fase_grupos_mais_32avos.png — ranking grupos + 32 avos"
+            if legivel
+            else "fase_grupos_mais_32avos.png"
+        )
     if selecao.rodada_png:
         if jogos_rodada:
             ids = ", ".join(str(jogo_id) for jogo_id in jogos_rodada)
-            itens.append(f"rodada.png (palpites J{ids})")
+            itens.append(
+                f"rodada.png — ranking AO LADO dos palpites provisorios (J{ids})"
+                if legivel
+                else f"rodada.png (palpites J{ids})"
+            )
         else:
-            itens.append("rodada.png (palpites — informe jogos)")
+            itens.append(
+                "rodada.png — ranking + palpites lado a lado (informe o jogo)"
+                if legivel
+                else "rodada.png (palpites — informe jogos)"
+            )
     return itens
+
+
+BREADCRUMB_RODADA_PNG = "Menu > Rodada de hoje > Ranking + palpites"
+
+
+def caminho_menu_export(nome_arquivo: str) -> str:
+    """Breadcrumb textual de como gerar cada arquivo pelo menu."""
+    mapa = {
+        "classificacao.png": "Menu > Compartilhar > So ranking",
+        "classificacao.txt": "Menu > Compartilhar > So ranking",
+        "rodada.png": "Menu > Rodada de hoje > Ranking + palpites  OU  Compartilhar > Rodada ao vivo",
+        "palpites.png": "Menu > Palpites > Exportar placares simples",
+        "palpites_provisorios.png": "Menu > Palpites > Exportar com quesito e vencedor",
+        "premio_a.png": "Menu > Compartilhar > Tudo  OU  Tabelas",
+        "fase_32avos.png": "Menu > Tabelas > Pontuacao por fase > 32 avos",
+        "fase_grupos_mais_32avos.png": "Menu > Compartilhar > Tudo",
+    }
+    return mapa.get(nome_arquivo.split()[0], "Menu > Compartilhar")

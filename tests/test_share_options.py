@@ -3,10 +3,12 @@ import unittest
 from src.share_options import (
     SelecaoCompartilhar,
     ajustar_selecao_disponivel,
+    caminho_menu_export,
     descrever_exports,
     disponibilidade_compartilhar,
     parse_export_list,
     selecao_geral_parcial_palpites,
+    selecao_rodada_whatsapp,
 )
 
 
@@ -31,6 +33,16 @@ class TestShareOptions(unittest.TestCase):
         )
         ajustada = ajustar_selecao_disponivel(selecao, disponivel)
         self.assertFalse(ajustada.fase_32avos_png)
+
+    def test_preset_rodada_whatsapp_enxuto(self) -> None:
+        selecao = selecao_rodada_whatsapp()
+        self.assertTrue(selecao.classificacao_png)
+        self.assertTrue(selecao.rodada_png)
+        self.assertFalse(selecao.fase_32avos_png)
+        self.assertFalse(selecao.fase_grupos_32avos_png)
+
+    def test_caminho_menu_export(self) -> None:
+        self.assertIn("Palpites", caminho_menu_export("palpites_provisorios.png"))
 
     def test_descrever_exports(self) -> None:
         selecao = SelecaoCompartilhar(classificacao_png=True, rodada_png=True)

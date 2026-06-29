@@ -1,5 +1,5 @@
 {
-  "jogos_realizados": 73,
+  "jogos_realizados": 74,
   "jogos_ids": [
     1,
     2,
@@ -73,232 +73,233 @@
     70,
     71,
     72,
-    73
+    73,
+    76
   ],
   "participantes": {
     "Meta AI": {
       "posicao": 1,
-      "soma": 161,
+      "soma": 173,
       "placar": 33,
-      "vencedor": 94,
-      "gols_casa": 10,
+      "vencedor": 101,
+      "gols_casa": 15,
       "gols_fora": 24,
       "grupos": 0
     },
-    "Lucas Copini": {
+    "Juan": {
       "posicao": 2,
-      "soma": 161,
-      "placar": 27,
-      "vencedor": 101,
-      "gols_casa": 17,
-      "gols_fora": 16,
+      "soma": 173,
+      "placar": 25,
+      "vencedor": 104,
+      "gols_casa": 18,
+      "gols_fora": 26,
       "grupos": 0
     },
     "Alisson Ottoni": {
       "posicao": 3,
-      "soma": 160,
+      "soma": 172,
       "placar": 30,
-      "vencedor": 95,
-      "gols_casa": 10,
+      "vencedor": 102,
+      "gols_casa": 15,
       "gols_fora": 25,
       "grupos": 0
     },
     "Benevides": {
       "posicao": 4,
-      "soma": 160,
+      "soma": 172,
       "placar": 15,
-      "vencedor": 103,
-      "gols_casa": 22,
+      "vencedor": 110,
+      "gols_casa": 27,
       "gols_fora": 20,
       "grupos": 0
     },
-    "Juan": {
-      "posicao": 5,
-      "soma": 156,
-      "placar": 15,
-      "vencedor": 97,
-      "gols_casa": 18,
-      "gols_fora": 26,
-      "grupos": 0
-    },
     "JV JEC": {
-      "posicao": 6,
-      "soma": 154,
-      "placar": 30,
-      "vencedor": 90,
+      "posicao": 5,
+      "soma": 171,
+      "placar": 40,
+      "vencedor": 97,
       "gols_casa": 17,
       "gols_fora": 17,
       "grupos": 0
     },
-    "André Galinha": {
-      "posicao": 7,
-      "soma": 154,
-      "placar": 27,
-      "vencedor": 95,
-      "gols_casa": 11,
-      "gols_fora": 21,
-      "grupos": 0
-    },
     "Rodrigo (DDD 95)": {
-      "posicao": 8,
-      "soma": 153,
-      "placar": 28,
-      "vencedor": 89,
+      "posicao": 6,
+      "soma": 170,
+      "placar": 38,
+      "vencedor": 96,
       "gols_casa": 17,
       "gols_fora": 19,
       "grupos": 0
     },
-    "Haron Bonamigo": {
-      "posicao": 9,
-      "soma": 151,
-      "placar": 30,
-      "vencedor": 91,
-      "gols_casa": 14,
+    "Lucas Copini": {
+      "posicao": 7,
+      "soma": 168,
+      "placar": 27,
+      "vencedor": 108,
+      "gols_casa": 17,
       "gols_fora": 16,
       "grupos": 0
     },
-    "Diego Campos": {
-      "posicao": 10,
-      "soma": 151,
-      "placar": 12,
-      "vencedor": 97,
-      "gols_casa": 17,
-      "gols_fora": 25,
+    "André Galinha": {
+      "posicao": 8,
+      "soma": 166,
+      "placar": 27,
+      "vencedor": 102,
+      "gols_casa": 16,
+      "gols_fora": 21,
+      "grupos": 0
+    },
+    "Haron Bonamigo": {
+      "posicao": 9,
+      "soma": 163,
+      "placar": 30,
+      "vencedor": 98,
+      "gols_casa": 14,
+      "gols_fora": 21,
       "grupos": 0
     },
     "Ayrton": {
-      "posicao": 11,
-      "soma": 149,
+      "posicao": 10,
+      "soma": 161,
       "placar": 12,
-      "vencedor": 93,
-      "gols_casa": 14,
+      "vencedor": 100,
+      "gols_casa": 19,
       "gols_fora": 30,
       "grupos": 0
     },
     "Mazeta": {
-      "posicao": 12,
-      "soma": 148,
+      "posicao": 11,
+      "soma": 160,
       "placar": 21,
-      "vencedor": 93,
-      "gols_casa": 13,
+      "vencedor": 100,
+      "gols_casa": 18,
       "gols_fora": 21,
+      "grupos": 0
+    },
+    "Diego Campos": {
+      "posicao": 12,
+      "soma": 158,
+      "placar": 12,
+      "vencedor": 104,
+      "gols_casa": 17,
+      "gols_fora": 25,
       "grupos": 0
     },
     "Gui": {
       "posicao": 13,
-      "soma": 143,
+      "soma": 155,
       "placar": 21,
-      "vencedor": 89,
+      "vencedor": 96,
       "gols_casa": 13,
-      "gols_fora": 20,
+      "gols_fora": 25,
       "grupos": 0
     },
     "Jose Carlos": {
       "posicao": 14,
-      "soma": 143,
+      "soma": 155,
       "placar": 12,
-      "vencedor": 95,
+      "vencedor": 102,
       "gols_casa": 22,
-      "gols_fora": 14,
-      "grupos": 0
-    },
-    "Emboava": {
-      "posicao": 15,
-      "soma": 137,
-      "placar": 15,
-      "vencedor": 89,
-      "gols_casa": 15,
-      "gols_fora": 18,
-      "grupos": 0
-    },
-    "Gabs": {
-      "posicao": 16,
-      "soma": 137,
-      "placar": 15,
-      "vencedor": 79,
-      "gols_casa": 14,
-      "gols_fora": 29,
+      "gols_fora": 19,
       "grupos": 0
     },
     "Til ponto": {
-      "posicao": 17,
-      "soma": 136,
-      "placar": 12,
-      "vencedor": 95,
+      "posicao": 15,
+      "soma": 153,
+      "placar": 22,
+      "vencedor": 102,
       "gols_casa": 13,
       "gols_fora": 16,
       "grupos": 0
     },
-    "Marlon Wietzikoski": {
-      "posicao": 18,
-      "soma": 133,
-      "placar": 18,
-      "vencedor": 77,
-      "gols_casa": 14,
-      "gols_fora": 24,
+    "Emboava": {
+      "posicao": 16,
+      "soma": 149,
+      "placar": 15,
+      "vencedor": 96,
+      "gols_casa": 15,
+      "gols_fora": 23,
+      "grupos": 0
+    },
+    "Gabs": {
+      "posicao": 17,
+      "soma": 149,
+      "placar": 15,
+      "vencedor": 86,
+      "gols_casa": 19,
+      "gols_fora": 29,
       "grupos": 0
     },
     "Pylegend": {
-      "posicao": 19,
-      "soma": 131,
-      "placar": 18,
-      "vencedor": 82,
+      "posicao": 18,
+      "soma": 148,
+      "placar": 28,
+      "vencedor": 89,
       "gols_casa": 16,
       "gols_fora": 15,
       "grupos": 0
     },
-    "Ramos": {
-      "posicao": 20,
-      "soma": 129,
+    "Marlon Wietzikoski": {
+      "posicao": 19,
+      "soma": 145,
       "placar": 18,
-      "vencedor": 83,
-      "gols_casa": 15,
-      "gols_fora": 13,
-      "grupos": 0
-    },
-    "Rodri": {
-      "posicao": 21,
-      "soma": 129,
-      "placar": 15,
-      "vencedor": 78,
-      "gols_casa": 16,
-      "gols_fora": 20,
+      "vencedor": 84,
+      "gols_casa": 14,
+      "gols_fora": 29,
       "grupos": 0
     },
     "Xonha": {
-      "posicao": 22,
-      "soma": 127,
-      "placar": 18,
-      "vencedor": 77,
+      "posicao": 20,
+      "soma": 144,
+      "placar": 28,
+      "vencedor": 84,
       "gols_casa": 8,
       "gols_fora": 24,
       "grupos": 0
     },
     "Arthur SK": {
-      "posicao": 23,
-      "soma": 125,
-      "placar": 18,
-      "vencedor": 72,
+      "posicao": 21,
+      "soma": 142,
+      "placar": 28,
+      "vencedor": 79,
       "gols_casa": 13,
       "gols_fora": 22,
       "grupos": 0
     },
+    "Ramos": {
+      "posicao": 22,
+      "soma": 141,
+      "placar": 18,
+      "vencedor": 90,
+      "gols_casa": 20,
+      "gols_fora": 13,
+      "grupos": 0
+    },
+    "Rodri": {
+      "posicao": 23,
+      "soma": 136,
+      "placar": 15,
+      "vencedor": 85,
+      "gols_casa": 16,
+      "gols_fora": 20,
+      "grupos": 0
+    },
     "Hotel Plus Antonio Menezes": {
       "posicao": 24,
-      "soma": 118,
+      "soma": 130,
       "placar": 15,
-      "vencedor": 71,
+      "vencedor": 78,
       "gols_casa": 16,
-      "gols_fora": 16,
+      "gols_fora": 21,
       "grupos": 0
     },
     "Matheus Honorato": {
       "posicao": 25,
-      "soma": 84,
+      "soma": 96,
       "placar": 3,
-      "vencedor": 45,
+      "vencedor": 52,
       "gols_casa": 21,
-      "gols_fora": 15,
+      "gols_fora": 20,
       "grupos": 0
     }
   }
