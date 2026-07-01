@@ -84,22 +84,53 @@ A pasta `data/ultimo/` está no `.gitignore` — não versione PNGs/TXTs gerados
 
 ### Sincronizar entre administradores (Git)
 
-Depois de lançar jogos ou confirmar rodada em um PC:
+**Fluxo combinado do time:** issue por rodada → branch → PR → revisão → merge. Evita push direto na `main` e deixa histórico claro.
+
+#### 1. Abrir issue (GitHub)
+
+Título sugerido: `Rodada jogos 81–82`
+
+Corpo mínimo:
+- Jogos da rodada: 81, 82
+- Admin responsável: @usuario
+- [ ] Placares lançados
+- [ ] Rodada confirmada (snapshot)
+- [ ] Imagens compartilhadas no grupo
+
+No repositório: **Issues → New issue** → escolher template **Rodada**.
+
+#### 2. Branch e trabalho local
 
 ```bash
-git add data/resultados.csv data/classificacao_snapshot.json
-git commit -m "Atualiza placares apos jogos XX-YY"
-git push
+git pull
+git checkout -b rodada/j81-j82
+python -m src.cli          # lançar placares, compartilhar, confirmar rodada
 ```
 
-No outro PC:
+#### 3. Commit e Pull Request
+
+```bash
+git add data/base/resultados.csv data/base/classificacao_snapshot.json
+git commit -m "chore: confirma placares j81-82 e atualiza baseline"
+git push -u origin rodada/j81-j82
+```
+
+No GitHub: **Compare & pull request** → preencher o template → solicitar revisão do outro admin (se estiver disponível) → **Merge**.
+
+No corpo do PR ou no commit, referencie a issue: `Closes #N` (fecha automaticamente ao mergear).
+
+#### 4. No outro PC (após o merge)
 
 ```bash
 git pull
 python -m src.cli compartilhar
 ```
 
-**Importante:** sempre faça `git pull` antes de lançar placares, para não sobrescrever o trabalho de outro admin.
+**Importante:**
+- Sempre `git pull` antes de lançar placares.
+- Não commitar direto na `main` (exceto emergência; depois abrir PR retroativo se possível).
+- Arquivos versionados da rodada: `data/base/resultados.csv` e `data/base/classificacao_snapshot.json`.
+- Exports em `data/ultimo/` **não** vão para o Git (cada PC gera localmente).
 
 ---
 
@@ -212,7 +243,7 @@ python -m src.cli reset --com-resultados
 
 1. Ajustar/corrigir placares (opções **3**, **4** ou **5**)
 2. Menu **2** — confirmar rodada
-3. `git add data/resultados.csv data/classificacao_snapshot.json && git commit && git push`
+3. Abrir PR com `data/base/resultados.csv` e `data/base/classificacao_snapshot.json` (ver seção Git)
 4. Menu **1** — compartilhar classificação final do dia
 
 ---
