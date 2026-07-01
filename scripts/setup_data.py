@@ -10,22 +10,24 @@ DATA = BASE / "data"
 DOWNLOADS = Path.home() / "Downloads"
 
 SOURCES = {
-    "bolao.csv": DOWNLOADS / "BOLÃO THDFM WC26 - Fase de grupos.csv",
-    "classificacao_referencia.csv": DOWNLOADS / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv",
-    "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv": DOWNLOADS
+    "base/bolao.csv": DOWNLOADS / "BOLÃO THDFM WC26 - Fase de grupos.csv",
+    "fontes/classificacao_referencia.csv": DOWNLOADS / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv",
+    "fontes/BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv": DOWNLOADS
     / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv",
 }
 
 
 def main() -> None:
     DATA.mkdir(parents=True, exist_ok=True)
-    for dest_name, source in SOURCES.items():
-        dest = DATA / dest_name
+    (DATA / "base").mkdir(parents=True, exist_ok=True)
+    (DATA / "fontes").mkdir(parents=True, exist_ok=True)
+    for dest_rel, source in SOURCES.items():
+        dest = DATA / dest_rel
         if dest.exists():
             print(f"OK (já existe): {dest}")
             continue
         if not source.exists():
-            print(f"Pulando {dest_name}: origem não encontrada em {source}")
+            print(f"Pulando {dest_rel}: origem não encontrada em {source}")
             continue
         shutil.copy2(source, dest)
         print(f"Copiado: {source} -> {dest}")

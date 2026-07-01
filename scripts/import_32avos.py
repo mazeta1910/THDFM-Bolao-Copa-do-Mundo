@@ -15,11 +15,15 @@ from src.penaltis import (
     exportar_palpites_penaltis,
 )
 
+from src.data_paths import (
+    BOLAO_CSV,
+    PALPITES_PENALTIS_CSV,
+    RESPOSTAS_32_AVOS_CSV,
+    RESULTADOS_CSV,
+    ensure_data_layout,
+)
+
 DATA_DIR = BASE_DIR / "data"
-BOLAO_CSV = DATA_DIR / "bolao.csv"
-RESULTADOS_CSV = DATA_DIR / "resultados.csv"
-RESPOSTAS_32_AVOS = DATA_DIR / "BOLÃO THDFM WC26 - RESPOSTAS 32 AVOS.csv"
-PALPITES_PENALTIS_CSV = DATA_DIR / "palpites_penaltis.csv"
 
 JOGOS_32_AVOS: dict[int, tuple[str, str]] = {
     73: ("África do Sul", "Canadá"),
@@ -221,7 +225,7 @@ def _atualizar_linha_palpite(linha: str, casa: int, fora: int) -> str:
 def atualizar_palpites_32_avos(
     *,
     bolao_path: Path = BOLAO_CSV,
-    respostas_path: Path = RESPOSTAS_32_AVOS,
+    respostas_path: Path = RESPOSTAS_32_AVOS_CSV,
     apenas_participantes: list[str] | None = None,
 ) -> int:
     """Atualiza palpites J73-J88 no bolao.csv a partir da planilha de respostas."""
@@ -291,7 +295,7 @@ def _exportar_penaltis_respostas(respostas_path: Path) -> None:
 def importar_32_avos(
     *,
     bolao_path: Path = BOLAO_CSV,
-    respostas_path: Path = RESPOSTAS_32_AVOS,
+    respostas_path: Path = RESPOSTAS_32_AVOS_CSV,
     resultados_path: Path = RESULTADOS_CSV,
     palpite_padrao: tuple[int, int] = PALPITE_PADRAO,
 ) -> None:
@@ -375,6 +379,8 @@ def _reportar(
 
 if __name__ == "__main__":
     import argparse
+
+    ensure_data_layout(DATA_DIR)
 
     parser = argparse.ArgumentParser(description="Importa ou atualiza palpites dos 32 avos.")
     parser.add_argument(

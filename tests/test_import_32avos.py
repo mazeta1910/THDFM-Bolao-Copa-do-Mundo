@@ -3,8 +3,9 @@ from pathlib import Path
 
 from scripts.import_32avos import JOGOS_32_AVOS, _carregar_palpites_respostas, validar_colunas_respostas
 
-DATA = Path(__file__).resolve().parent.parent / "data"
-RESPOSTAS = DATA / "BOLÃO THDFM WC26 - RESPOSTAS 32 AVOS.csv"
+from src.data_paths import DATA_DIR, RESPOSTAS_32_AVOS_CSV
+
+RESPOSTAS = RESPOSTAS_32_AVOS_CSV
 
 
 class TestImport32Avos(unittest.TestCase):

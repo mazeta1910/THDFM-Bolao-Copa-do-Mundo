@@ -85,11 +85,26 @@ try:
 except ImportError:
     _PNG_DISPONIVEL = False
 
+from src.data_paths import (
+    BOLAO_CSV,
+    CLASSIFICACOES_REAIS_CSV,
+    CRAVADURA_CSV,
+    DATA_DIR,
+    PALPITES_PENALTIS_CSV,
+    PALPITES_PRIMEIRA_FASE_CSV,
+    REFERENCIA_CSV,
+    REFERENCIA_GERAL_CSV,
+    RESPOSTAS_32_AVOS_CSV,
+    RESULTADOS_CSV,
+    SNAPSHOT_JSON,
+    candidatos_referencia_geral,
+    ensure_data_layout,
+    resolver_bolao_csv,
+)
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
 DOWNLOADS = Path.home() / "Downloads"
-BOLAO_CSV = DATA_DIR / "bolao.csv"
-RESULTADOS_CSV = DATA_DIR / "resultados.csv"
+
 CLASSIFICACAO_CSV = caminho_ultimo(DATA_DIR, "classificacao_csv")
 CLASSIFICACAO_TXT = caminho_ultimo(DATA_DIR, "classificacao_txt")
 CLASSIFICACAO_PNG = caminho_ultimo(DATA_DIR, "classificacao_png")
@@ -98,25 +113,7 @@ CLASSIFICACAO_PREMIO_A_PNG = caminho_ultimo(DATA_DIR, "premio_a_png")
 CLASSIFICACAO_32AVOS_PNG = caminho_ultimo(DATA_DIR, "fase_32avos_png")
 CLASSIFICACAO_GRUPOS_32AVOS_PNG = caminho_ultimo(DATA_DIR, "fase_grupos_32avos_png")
 RODADA_PNG = caminho_ultimo(DATA_DIR, "rodada_png")
-CRAVADURA_CSV = DATA_DIR / "BOLÃO THDFM WC26 - CRAVADURA.csv"
-SNAPSHOT_JSON = DATA_DIR / "classificacao_snapshot.json"
-REFERENCIA_CSV = DATA_DIR / "classificacao_referencia.csv"
-REFERENCIA_GERAL_CSV = DATA_DIR / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv"
-CLASSIFICACOES_REAIS_CSV = DATA_DIR / "Planilha Classificações Reais.csv"
-PALPITES_PRIMEIRA_FASE_CSV = (
-    DATA_DIR / "BOLÃO THDFM WC26 - RESPOSTAS PRIMEIRA FASE E CRAVADURA.csv"
-)
-RESPOSTAS_32_AVOS_CSV = DATA_DIR / "BOLÃO THDFM WC26 - RESPOSTAS 32 AVOS.csv"
-PALPITES_PENALTIS_CSV = DATA_DIR / "palpites_penaltis.csv"
 RANKING_GRUPOS_TXT = caminho_ultimo(DATA_DIR, "ranking_grupos_txt")
-
-_ARQUIVOS_IGNORADOS = {
-    "resultados.csv",
-    "classificacao.csv",
-    "classificacao_referencia.csv",
-    "classificacao_snapshot.json",
-    "palpites_penaltis.csv",
-}
 
 
 def _finalizar_exports(descricoes: dict[str, str]) -> None:
@@ -136,22 +133,11 @@ def _resolve_arquivo(path: Path, fallback_name: str) -> Path:
 
 
 def _resolver_bolao_csv() -> Path:
-    if BOLAO_CSV.exists():
-        return BOLAO_CSV
-
-    candidatos = [
-        path
-        for path in sorted(DATA_DIR.glob("*.csv"), key=lambda item: item.stat().st_mtime, reverse=True)
-        if path.name.lower() not in _ARQUIVOS_IGNORADOS
-        and "fase de grupos" in path.name.lower()
-    ]
-    if candidatos:
-        return candidatos[0]
-
-    return _resolve_arquivo(BOLAO_CSV, "BOLÃO THDFM WC26 - Fase de grupos.csv")
+    return resolver_bolao_csv(DATA_DIR, downloads=DOWNLOADS)
 
 
 def carregar_bolao(arquivo: Path | None = None):
+    ensure_data_layout(DATA_DIR)
     path = arquivo or _resolver_bolao_csv()
     if not path.exists():
         raise FileNotFoundError(f"Arquivo do bolão não encontrado: {path}")
@@ -354,7 +340,9 @@ def cmd_importar_referencia(args: argparse.Namespace) -> int:
         return 1
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    ensure_data_layout(DATA_DIR)
     destino = REFERENCIA_GERAL_CSV if referencia_tem_secao_grupos_32avos(origem) else REFERENCIA_CSV
+    destino.parent.mkdir(parents=True, exist_ok=True)
     if origem.resolve() != destino.resolve():
         shutil.copy2(origem, destino)
     secao = "grupos_32avos" if referencia_tem_secao_grupos_32avos(destino) else "grupos"
@@ -1072,6 +1060,8 @@ def cmd_reset(args: argparse.Namespace) -> int:
         return 1
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    ensure_data_layout(DATA_DIR)
+    BOLAO_CSV.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(origem, BOLAO_CSV)
     print(f"Planilha ativa: {BOLAO_CSV.name} (copiada de {origem.name})")
 

@@ -1,31 +1,25 @@
 import unittest
 from pathlib import Path
 
+from src.data_paths import (
+    DATA_DIR,
+    resolver_arquivo_base,
+    resolver_arquivo_fonte,
+)
 from src.loader import aplicar_resultados_externos
 from src.ranking import gerar_classificacao_jogos
 from src.thdfm_parser import parse_thdfm_csv
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-DOWNLOADS = Path.home() / "Downloads"
-
-
-def _resolve(path: Path, fallback_name: str) -> Path:
-    if path.exists():
-        return path
-    fallback = DOWNLOADS / fallback_name
-    return fallback if fallback.exists() else path
-
-
-BOLAO_PATH = _resolve(DATA_DIR / "bolao.csv", "BOLÃO THDFM WC26 - Fase de grupos.csv")
-REFERENCIA_PATH = _resolve(
-    DATA_DIR / "classificacao_referencia.csv",
-    "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv",
+BOLAO_PATH = resolver_arquivo_base("bolao.csv", data_dir=DATA_DIR)
+REFERENCIA_PATH = resolver_arquivo_fonte(
+    "classificacao_referencia.csv",
+    data_dir=DATA_DIR,
 )
+RESULTADOS_PATH = resolver_arquivo_base("resultados.csv", data_dir=DATA_DIR)
 
 
 def _resultados_preenchidos() -> bool:
-    path = DATA_DIR / "resultados.csv"
+    path = RESULTADOS_PATH
     if not path.exists():
         return False
     import csv
@@ -74,7 +68,7 @@ class TestThdfmParser(unittest.TestCase):
 class TestParity(unittest.TestCase):
     def test_classificacao_soma_consistente(self):
         bolao = parse_thdfm_csv(BOLAO_PATH)
-        aplicar_resultados_externos(bolao, DATA_DIR / "resultados.csv")
+        aplicar_resultados_externos(bolao, RESULTADOS_PATH)
         calculada = gerar_classificacao_jogos(bolao)
         for linha in calculada:
             esperado = linha.placar + linha.vencedor + linha.gols_casa + linha.gols_fora

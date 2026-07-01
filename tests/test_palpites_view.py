@@ -17,31 +17,18 @@ from src.palpites_view import (
 )
 from src.thdfm_parser import parse_thdfm_csv
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-DOWNLOADS = Path.home() / "Downloads"
+from src.data_paths import BOLAO_CSV, DATA_DIR, RESULTADOS_CSV, resolver_arquivo_base
 
 
-def _resolve_bolao() -> Path:
-    candidatos = [
-        DATA_DIR / "bolao.csv",
-        DATA_DIR / "BOLÃO THDFM WC26 - Fase de grupos (1).csv",
-        DOWNLOADS / "BOLÃO THDFM WC26 - Fase de grupos.csv",
-    ]
-    for path in candidatos:
-        if path.exists():
-            return path
-    return candidatos[0]
-
-
-BOLAO_PATH = _resolve_bolao()
+BOLAO_PATH = resolver_arquivo_base("bolao.csv", data_dir=DATA_DIR)
+RESULTADOS_PATH = resolver_arquivo_base("resultados.csv", data_dir=DATA_DIR)
 
 
 @unittest.skipUnless(BOLAO_PATH.exists(), "CSV do bolao ausente")
 class TestPalpitesView(unittest.TestCase):
     def setUp(self):
         self.bolao = parse_thdfm_csv(BOLAO_PATH)
-        aplicar_resultados_externos(self.bolao, DATA_DIR / "resultados.csv")
+        aplicar_resultados_externos(self.bolao, RESULTADOS_PATH)
         jogo1 = next(j for j in self.bolao.jogos if j.id == 1)
         if not jogo1.realizado:
             jogo1.gols_casa = 2

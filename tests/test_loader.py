@@ -9,13 +9,14 @@ from src.loader import (
     limpar_todos_resultados,
     salvar_resultados,
 )
+from src.data_paths import resolver_arquivo_base
 from src.thdfm_parser import parse_thdfm_csv
 
 
 class TestLoaderResultados(unittest.TestCase):
     def test_resultados_vazios_ignoram_placar_da_planilha(self):
         with tempfile.TemporaryDirectory() as tmp:
-            origem = Path(__file__).resolve().parent.parent / "data" / "bolao.csv"
+            origem = resolver_arquivo_base("bolao.csv")
             if not origem.exists():
                 self.skipTest("CSV do bolão ausente")
 
@@ -29,7 +30,7 @@ class TestLoaderResultados(unittest.TestCase):
             self.assertEqual(sum(1 for j in bolao_carregado.jogos if j.realizado), 0)
 
     def test_importar_resultados_da_planilha(self):
-        origem = Path(__file__).resolve().parent.parent / "data" / "bolao.csv"
+        origem = resolver_arquivo_base("bolao.csv")
         if not origem.exists():
             self.skipTest("CSV do bolão ausente")
 

@@ -394,15 +394,9 @@ def resolver_referencia_geral_csv(
     downloads: Path | None = None,
 ) -> Path | None:
     """Preferencia: CLASSIFICACAO PROVISORIA (1).csv com secao grupos+32 avos."""
-    data_dir = Path(data_dir)
-    candidatos = [
-        data_dir / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv",
-        data_dir / "classificacao_referencia.csv",
-        data_dir / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv",
-    ]
-    if downloads is not None:
-        candidatos.append(downloads / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv")
-        candidatos.append(downloads / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv")
+    from src.data_paths import candidatos_referencia_geral
+
+    candidatos = candidatos_referencia_geral(data_dir, downloads=downloads)
 
     for path in candidatos:
         if path.exists() and referencia_tem_secao_grupos_32avos(path):

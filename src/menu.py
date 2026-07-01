@@ -409,7 +409,7 @@ def _nome_arquivo_export(item: str) -> str:
 def _imprimir_dica_palpites_somente() -> None:
     print("\nQuer SOMENTE a tabela de palpites (sem ranking)?")
     print("  Menu > Palpites > 2. Exportar palpites provisorios")
-    print("  (gera palpites_provisorios.png em data/ultimo/)")
+    print("  (gera palpites_provisorios.png em data/ultimo/png/)")
 
 
 def _imprimir_preview_exports(
@@ -427,7 +427,7 @@ def _imprimir_preview_exports(
     )
     if breadcrumb:
         _breadcrumb(*breadcrumb)
-    print("\nArquivos que serao gerados em data/ultimo/:")
+    print("\nArquivos que serao gerados em data/ultimo/ (png/, txt/, csv/):")
     for item in itens:
         print(f"  • {item}")
     if itens:
@@ -845,7 +845,7 @@ def _submenu_tabelas() -> None:
         print(" 2. Pontuacao parcial por fase (detalhada)")
         print(" 3. Ranking parcial dos grupos (premio A)")
         print(" 4. Ver indice de exports (manifest.txt)")
-        print(" 5. Abrir pasta data/ultimo/")
+        print(" 5. Abrir pasta data/ultimo/ (png, txt, csv)")
         print(" 0. Voltar")
 
         escolha = _ler_linha("Opcao: ")
@@ -939,7 +939,7 @@ def _submenu_ferramentas() -> None:
                     print("Cancelado.")
                     continue
                 if not caminho:
-                    caminho = "data/BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv"
+                    caminho = "data/fontes/BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv"
                 cmd_importar_referencia(_namespace(arquivo=caminho))
             elif escolha == "6":
                 cmd_importar_resultados(_namespace(arquivo=None, sem_baseline=False, conferir=False))
