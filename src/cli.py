@@ -19,6 +19,7 @@ from src.ranking import (
     calcular_variacoes_da_rodada,
     calcular_variacoes_jogos,
     carregar_classificacao_referencia,
+    classificacao_geral_ativa,
     comparar_classificacoes,
     exportar_classificacao,
     exportar_classificacao_premio_a,
@@ -31,8 +32,11 @@ from src.ranking import (
     gerar_classificacao_grupos_mais_32avos,
     gerar_classificacao_jogos,
     gerar_classificacao_premio_a,
+    JOGOS_BASELINE_REFERENCIA_GERAL,
     legenda_pesos_fase,
     jogos_recem_realizados,
+    referencia_tem_secao_grupos_32avos,
+    resolver_referencia_geral_csv,
     resumir_jogos_export,
     sugerir_jogos_provisorios,
 )
@@ -97,6 +101,7 @@ RODADA_PNG = caminho_ultimo(DATA_DIR, "rodada_png")
 CRAVADURA_CSV = DATA_DIR / "BOLÃO THDFM WC26 - CRAVADURA.csv"
 SNAPSHOT_JSON = DATA_DIR / "classificacao_snapshot.json"
 REFERENCIA_CSV = DATA_DIR / "classificacao_referencia.csv"
+REFERENCIA_GERAL_CSV = DATA_DIR / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv"
 CLASSIFICACOES_REAIS_CSV = DATA_DIR / "Planilha Classificações Reais.csv"
 PALPITES_PRIMEIRA_FASE_CSV = (
     DATA_DIR / "BOLÃO THDFM WC26 - RESPOSTAS PRIMEIRA FASE E CRAVADURA.csv"
@@ -182,19 +187,30 @@ def _carregar_baseline_variacao() -> tuple[dict[str, dict] | None, set[int], boo
             True,
         )
 
-    referencia_path = _resolve_arquivo(
+    referencia_path = _resolver_referencia_geral() or _resolve_arquivo(
         REFERENCIA_CSV, "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv"
     )
     if referencia_path.exists():
-        referencia = carregar_classificacao_referencia(referencia_path)
-        return snapshot_de_classificacao(referencia), set(), False
+        secao = "grupos_32avos" if referencia_tem_secao_grupos_32avos(referencia_path) else "grupos"
+        referencia = carregar_classificacao_referencia(referencia_path, secao=secao)
+        return snapshot_de_classificacao(referencia), set(JOGOS_BASELINE_REFERENCIA_GERAL), False
 
     return None, set(), False
 
 
+def _resolver_referencia_geral() -> Path | None:
+    return resolver_referencia_geral_csv(DATA_DIR, downloads=DOWNLOADS)
+
+
 def _classificacao_jogos(bolao) -> list:
-    """Classificacao B: pontos dos resultados dos jogos."""
-    return gerar_classificacao_jogos(bolao)
+    """Classificacao B: tabela geral (grupos + 32 avos), referencia Excel + jogos novos."""
+    ref = _resolver_referencia_geral()
+    return classificacao_geral_ativa(
+        bolao,
+        importada_path=ref,
+        jogos_ids_baseline=set(JOGOS_BASELINE_REFERENCIA_GERAL),
+        data_dir=DATA_DIR,
+    )
 
 
 def _classificacao_premio_a(bolao) -> tuple[list, bool]:
@@ -213,7 +229,7 @@ def _tabelas_mata_mata(bolao) -> tuple[list | None, list | None]:
         return None, None
     return (
         gerar_classificacao_32avos(bolao),
-        gerar_classificacao_grupos_mais_32avos(bolao),
+        _classificacao_jogos(bolao),
     )
 
 
@@ -338,16 +354,21 @@ def cmd_importar_referencia(args: argparse.Namespace) -> int:
         return 1
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(origem, REFERENCIA_CSV)
-    classificacao = carregar_classificacao_referencia(REFERENCIA_CSV)
+    destino = REFERENCIA_GERAL_CSV if referencia_tem_secao_grupos_32avos(origem) else REFERENCIA_CSV
+    if origem.resolve() != destino.resolve():
+        shutil.copy2(origem, destino)
+    secao = "grupos_32avos" if referencia_tem_secao_grupos_32avos(destino) else "grupos"
+    classificacao = carregar_classificacao_referencia(destino, secao=secao)
     print(
-        f"Classificação importada: {len(classificacao)} participantes em {REFERENCIA_CSV.name}"
+        f"Classificação importada: {len(classificacao)} participantes em {destino.name}"
     )
     print("Essa tabela passa a ser usada pelo programa (classificar, compartilhar e PNG).")
 
     bolao = carregar_bolao()
     realizados = sum(1 for j in bolao.jogos if j.realizado)
-    jogos_ids = [jogo.id for jogo in bolao.jogos if j.realizado]
+    jogos_ids = sorted(JOGOS_BASELINE_REFERENCIA_GERAL & {j.id for j in bolao.jogos if j.realizado})
+    if not jogos_ids:
+        jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
     salvar_snapshot(
         SNAPSHOT_JSON,
         classificacao,
@@ -1002,7 +1023,7 @@ def cmd_baseline(_args: argparse.Namespace) -> int:
 
 
 def cmd_conferir(_args: argparse.Namespace) -> int:
-    referencia_path = _resolve_arquivo(
+    referencia_path = _resolver_referencia_geral() or _resolve_arquivo(
         REFERENCIA_CSV, "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv"
     )
     if not referencia_path.exists():
@@ -1010,17 +1031,24 @@ def cmd_conferir(_args: argparse.Namespace) -> int:
         return 1
 
     bolao = carregar_bolao()
-    calculada = gerar_classificacao(bolao)
-    referencia = carregar_classificacao_referencia(referencia_path)
+    calculada = gerar_classificacao_jogos(bolao)
+    secao = "grupos_32avos" if referencia_tem_secao_grupos_32avos(referencia_path) else "grupos"
+    referencia = carregar_classificacao_referencia(referencia_path, secao=secao)
     diferencas = comparar_classificacoes(calculada, referencia)
 
     if not diferencas:
-        print("Classificação confere com a referência.")
+        print("Classificação calculada confere com a referência.")
         return 0
 
-    print("Diferenças encontradas:")
-    for diff in diferencas:
+    print("Diferenças entre cálculo automático e referência do Excel:")
+    for diff in diferencas[:40]:
         print(f"  - {diff}")
+    if len(diferencas) > 40:
+        print(f"  ... e mais {len(diferencas) - 40} diferença(s)")
+    print(
+        "\nA tabela geral exibida usa a referência do Excel; "
+        "novos jogos (J80+) serão somados automaticamente."
+    )
     return 1
 
 

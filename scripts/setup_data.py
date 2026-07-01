@@ -12,6 +12,8 @@ DOWNLOADS = Path.home() / "Downloads"
 SOURCES = {
     "bolao.csv": DOWNLOADS / "BOLÃO THDFM WC26 - Fase de grupos.csv",
     "classificacao_referencia.csv": DOWNLOADS / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv",
+    "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv": DOWNLOADS
+    / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv",
 }
 
 

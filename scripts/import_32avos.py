@@ -22,7 +22,7 @@ RESPOSTAS_32_AVOS = DATA_DIR / "BOLÃO THDFM WC26 - RESPOSTAS 32 AVOS.csv"
 PALPITES_PENALTIS_CSV = DATA_DIR / "palpites_penaltis.csv"
 
 JOGOS_32_AVOS: dict[int, tuple[str, str]] = {
-    73: ("Canadá", "África do Sul"),
+    73: ("África do Sul", "Canadá"),
     74: ("Alemanha", "Paraguai"),
     75: ("Holanda", "Marrocos"),
     76: ("Brasil", "Japão"),
@@ -48,7 +48,7 @@ NOME_ALIASES = {
     "cornorato": "Matheus Honorato",
 }
 
-JOGO_COL_RE = re.compile(r"^JOGO (\d+) \[")
+JOGO_COL_RE = re.compile(r"^JOGO (\d+) \[(.+)\]$")
 
 
 def _chave_nome(nome: str) -> str:
@@ -66,6 +66,73 @@ def _carregar_participantes_bolao(path: Path) -> list[str]:
     from src.thdfm_parser import parse_thdfm_csv
 
     return parse_thdfm_csv(path).participantes
+
+
+def _palpite_resposta_linha(
+    row: dict[str, str],
+    jogo_id: int,
+    colunas: list[str],
+) -> tuple[int, int] | None:
+    """Mapeia colunas do formulario (qualquer ordem) para gols casa/fora do bolao."""
+    from src.grupos_ranking import times_iguais
+
+    casa, fora = JOGOS_32_AVOS[jogo_id]
+    gols_casa: int | None = None
+    gols_fora: int | None = None
+
+    for coluna in colunas:
+        match = JOGO_COL_RE.match(coluna.strip())
+        if not match or int(match.group(1)) != jogo_id:
+            continue
+        time_col = match.group(2).strip()
+        valor = _parse_int(row.get(coluna, ""))
+        if valor is None:
+            continue
+        if times_iguais(time_col, casa):
+            gols_casa = valor
+        elif times_iguais(time_col, fora):
+            gols_fora = valor
+
+    if gols_casa is None or gols_fora is None:
+        return None
+    return gols_casa, gols_fora
+
+
+def validar_colunas_respostas(path: Path) -> list[str]:
+    """Garante que cada jogo tem colunas para casa e fora conforme JOGOS_32_AVOS."""
+    from src.grupos_ranking import times_iguais
+
+    erros: list[str] = []
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        times_por_jogo: dict[int, set[str]] = {}
+        for coluna in reader.fieldnames or []:
+            match = JOGO_COL_RE.match(coluna.strip())
+            if not match:
+                continue
+            jogo_id = int(match.group(1))
+            if jogo_id not in JOGOS_32_AVOS:
+                continue
+            times_por_jogo.setdefault(jogo_id, set()).add(match.group(2).strip())
+
+    for jogo_id, (casa, fora) in sorted(JOGOS_32_AVOS.items()):
+        times_col = times_por_jogo.get(jogo_id, set())
+        tem_casa = any(times_iguais(time_col, casa) for time_col in times_col)
+        tem_fora = any(times_iguais(time_col, fora) for time_col in times_col)
+        if not tem_casa or not tem_fora:
+            erros.append(
+                f"Jogo {jogo_id}: colunas do formulario {sorted(times_col)!r} "
+                f"nao correspondem a {casa!r} x {fora!r}"
+            )
+    return erros
+
+
+def _assert_colunas_respostas(path: Path) -> None:
+    erros = validar_colunas_respostas(path)
+    if erros:
+        raise ValueError(
+            "Planilha de respostas inconsistente com mandante/visitante:\n" + "\n".join(erros)
+        )
 
 
 def _carregar_palpites_respostas(path: Path) -> dict[str, dict[int, tuple[int, int]]]:
@@ -87,10 +154,9 @@ def _carregar_palpites_respostas(path: Path) -> dict[str, dict[int, tuple[int, i
             for jogo_id, colunas in colunas_por_jogo.items():
                 if jogo_id not in JOGOS_32_AVOS:
                     continue
-                valores = [_parse_int(row.get(coluna, "")) for coluna in sorted(colunas)]
-                nums = [valor for valor in valores if valor is not None]
-                if len(nums) >= 2:
-                    por_jogo[jogo_id] = (nums[0], nums[1])
+                palpite = _palpite_resposta_linha(row, jogo_id, colunas)
+                if palpite is not None:
+                    por_jogo[jogo_id] = palpite
             if por_jogo:
                 palpites[nome] = por_jogo
 
@@ -162,6 +228,7 @@ def atualizar_palpites_32_avos(
     if not respostas_path.exists():
         raise FileNotFoundError(f"Respostas dos 32 avos nao encontradas: {respostas_path}")
 
+    _assert_colunas_respostas(respostas_path)
     palpites_csv = _carregar_palpites_respostas(respostas_path)
     linhas = bolao_path.read_text(encoding="utf-8-sig").splitlines(keepends=True)
 
@@ -231,6 +298,7 @@ def importar_32_avos(
     if not respostas_path.exists():
         raise FileNotFoundError(f"Respostas dos 32 avos nao encontradas: {respostas_path}")
 
+    _assert_colunas_respostas(respostas_path)
     participantes = _carregar_participantes_bolao(bolao_path)
     palpites_csv = _carregar_palpites_respostas(respostas_path)
 

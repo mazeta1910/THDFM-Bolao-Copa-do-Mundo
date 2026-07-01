@@ -933,13 +933,13 @@ def _submenu_ferramentas() -> None:
                 cmd_conferir(_namespace())
             elif escolha == "5":
                 caminho = _ler_linha(
-                    "Caminho do CSV (Enter = classificacao_referencia.csv): "
+                    "Caminho do CSV (Enter = CLASSIFICACAO PROVISORIA (1).csv): "
                 )
                 if caminho is not None and _entrada_abortada(caminho):
                     print("Cancelado.")
                     continue
                 if not caminho:
-                    caminho = "data/classificacao_referencia.csv"
+                    caminho = "data/BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv"
                 cmd_importar_referencia(_namespace(arquivo=caminho))
             elif escolha == "6":
                 cmd_importar_resultados(_namespace(arquivo=None, sem_baseline=False, conferir=False))

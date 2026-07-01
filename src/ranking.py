@@ -3,6 +3,12 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
+
+SecaoClassificacaoReferencia = Literal["grupos", "grupos_32avos"]
+
+JOGOS_BASELINE_REFERENCIA_GERAL = frozenset(range(1, 80))
+_MARCADOR_SECAO_GRUPOS_32_AVOS = "GRUPOS + 32 AVOS"
 
 from src.cravadura import pontos_cravadura_por_participante
 from src.grupos_ranking import pontos_grupos_por_participante
@@ -283,12 +289,13 @@ def obter_classificacao(
     bolao: BolaoData,
     *,
     importada_path: str | Path | None = None,
+    secao: SecaoClassificacaoReferencia = "grupos",
 ) -> list[ClassificacaoLinha]:
     """Carrega a tabela importada do Excel, se existir; senao calcula dos palpites."""
     if importada_path is not None:
         path = Path(importada_path)
         if path.exists():
-            return carregar_classificacao_referencia(path)
+            return carregar_classificacao_referencia(path, secao=secao)
     return gerar_classificacao(bolao)
 
 
@@ -347,6 +354,7 @@ def classificacao_ativa(
     *,
     importada_path: str | Path | None = None,
     jogos_ids_baseline: set[int] | None = None,
+    secao: SecaoClassificacaoReferencia = "grupos",
 ) -> list[ClassificacaoLinha]:
     """Usa a importacao do Excel na baseline e soma apenas os jogos novos."""
     calculada = gerar_classificacao(bolao)
@@ -357,16 +365,82 @@ def classificacao_ativa(
         if importada_path is not None:
             path = Path(importada_path)
             if path.exists():
-                base = carregar_classificacao_referencia(path)
+                base = carregar_classificacao_referencia(path, secao=secao)
                 return aplicar_jogos_novos(bolao, base, jogos_ids_baseline)
         return calculada
 
     if importada_path is not None:
         path = Path(importada_path)
         if path.exists():
-            return carregar_classificacao_referencia(path)
+            return carregar_classificacao_referencia(path, secao=secao)
 
     return calculada
+
+
+def referencia_tem_secao_grupos_32avos(path: str | Path) -> bool:
+    path = Path(path)
+    if not path.exists():
+        return False
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        for row in csv.reader(handle):
+            if any(_MARCADOR_SECAO_GRUPOS_32_AVOS in cell for cell in row):
+                return True
+    return False
+
+
+def resolver_referencia_geral_csv(
+    data_dir: str | Path,
+    *,
+    downloads: Path | None = None,
+) -> Path | None:
+    """Preferencia: CLASSIFICACAO PROVISORIA (1).csv com secao grupos+32 avos."""
+    data_dir = Path(data_dir)
+    candidatos = [
+        data_dir / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv",
+        data_dir / "classificacao_referencia.csv",
+        data_dir / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv",
+    ]
+    if downloads is not None:
+        candidatos.append(downloads / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv")
+        candidatos.append(downloads / "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv")
+
+    for path in candidatos:
+        if path.exists() and referencia_tem_secao_grupos_32avos(path):
+            return path
+    for path in candidatos:
+        if path.exists():
+            return path
+    return None
+
+
+def classificacao_geral_ativa(
+    bolao: BolaoData,
+    *,
+    importada_path: str | Path | None = None,
+    jogos_ids_baseline: set[int] | None = None,
+    data_dir: str | Path | None = None,
+) -> list[ClassificacaoLinha]:
+    """Tabela geral (grupos + 32 avos): referencia do Excel + jogos novos calculados."""
+    path = Path(importada_path) if importada_path else None
+    if path is None or not path.exists():
+        path = resolver_referencia_geral_csv(data_dir or Path("data"))
+    if path is None or not path.exists():
+        return gerar_classificacao_jogos(bolao)
+
+    secao: SecaoClassificacaoReferencia = (
+        "grupos_32avos" if referencia_tem_secao_grupos_32avos(path) else "grupos"
+    )
+    baseline = (
+        set(jogos_ids_baseline)
+        if jogos_ids_baseline is not None
+        else set(JOGOS_BASELINE_REFERENCIA_GERAL)
+    )
+    return classificacao_ativa(
+        bolao,
+        importada_path=path,
+        jogos_ids_baseline=baseline,
+        secao=secao,
+    )
 
 
 def exportar_classificacao(classificacao: list[ClassificacaoLinha], path: str | Path) -> None:
@@ -654,19 +728,35 @@ def resumir_jogos_export(bolao: BolaoData, jogo_ids: list[int]) -> list[str]:
     return linhas
 
 
-def carregar_classificacao_referencia(path: str | Path) -> list[ClassificacaoLinha]:
-    path = Path(path)
+def _indice_cabecalho_secao(
+    rows: list[list[str]],
+    secao: SecaoClassificacaoReferencia,
+) -> int:
+    if secao == "grupos_32avos":
+        for indice, row in enumerate(rows):
+            if any(_MARCADOR_SECAO_GRUPOS_32_AVOS in cell for cell in row):
+                if indice + 1 < len(rows):
+                    return indice + 1
+                break
+        raise ValueError(f"Secao grupos+32 avos nao encontrada em {secao!r}")
+
+    if len(rows) < 2:
+        raise ValueError("CSV de referencia vazio ou invalido")
+    return 1
+
+
+def _parse_linhas_classificacao(
+    rows: list[list[str]],
+    cabecalho_idx: int,
+) -> list[ClassificacaoLinha]:
     linhas: list[ClassificacaoLinha] = []
-
-    with path.open(encoding="utf-8-sig", newline="") as handle:
-        reader = csv.reader(handle)
-        rows = list(reader)
-
-    for row in rows[2:]:
+    for row in rows[cabecalho_idx + 1 :]:
         if len(row) < 7:
             continue
         posicao = row[0].strip()
         if not posicao.isdigit():
+            if linhas:
+                break
             continue
         linhas.append(
             ClassificacaoLinha(
@@ -680,6 +770,19 @@ def carregar_classificacao_referencia(path: str | Path) -> list[ClassificacaoLin
             )
         )
     return linhas
+
+
+def carregar_classificacao_referencia(
+    path: str | Path,
+    *,
+    secao: SecaoClassificacaoReferencia = "grupos",
+) -> list[ClassificacaoLinha]:
+    path = Path(path)
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.reader(handle))
+
+    cabecalho_idx = _indice_cabecalho_secao(rows, secao)
+    return _parse_linhas_classificacao(rows, cabecalho_idx)
 
 
 def comparar_classificacoes(
