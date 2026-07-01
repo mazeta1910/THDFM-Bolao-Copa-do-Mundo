@@ -29,20 +29,55 @@ GRUPO E;;;;;;;;
 ;;;;;;;;
 Posição;Equipe;Pts;V;E;D;GP;GC;SG
 1;Alemanha;6;2;0;1;10;4;6
-2;Costa do Marfim;4;2;0;1;4;2;2
+2;Costa do Marfim;6;2;0;1;4;2;2
 3;Equador;4;1;1;1;2;2;0
 4;Curação;1;0;1;2;1;9;-8
 GRUPO F;;;;;;;;
 ;;;;;;;;
 Posição;Equipe;Pts;V;E;D;GP;GC;SG
-1;Países Baixos;7;2;1;0;10;4;6
-2;Japão;5;1;2;0;7;2;5
+1;Holanda;7;2;1;0;10;4;6
+2;Japão;5;1;2;0;7;3;4
 3;Suécia;4;1;1;1;7;7;0
 4;Tunísia;0;0;0;3;2;12;-10
 GRUPO G;;;;;;;;
 ;;;;;;;;
 Posição;Equipe;Pts;V;E;D;GP;GC;SG
-1;Egito;7;2;1;0;10;4;6
-2;Irã;5;1;2;0;7;2;5
-3;Bélgica;4;1;1;1;7;7;0
-4;Nova Zelândia;0;0;0;3;2;12;-10
+1;Bélgica;5;1;2;0;6;2;4
+2;Egito;5;1;2;0;5;3;2
+3;Irã;3;0;3;0;3;3;0
+4;Nova Zelândia;1;0;1;2;4;10;-6
+GRUPO H;;;;;;;;
+;;;;;;;;
+Posição;Equipe;Pts;V;E;D;GP;GC;SG
+1;Espanha;7;2;1;0;5;0;5
+2;Cabo Verde;3;0;3;0;2;2;0
+3;Uruguai;2;0;2;1;3;4;-1
+4;Arábia Saudita;2;0;2;1;1;5;-4
+GRUPO I;;;;;;;;
+;;;;;;;;
+Posição;Equipe;Pts;V;E;D;GP;GC;SG
+1;França;9;3;0;0;10;2;8
+2;Noruega;6;2;0;1;8;7;1
+3;Senegal;3;1;0;2;8;6;2
+4;Iraque;0;0;0;3;1;12;-11
+GRUPO J;;;;;;;;
+;;;;;;;;
+Posição;Equipe;Pts;V;E;D;GP;GC;SG
+1;Argentina;9;3;0;0;6;1;5
+2;Áustria;4;1;1;1;5;5;0
+3;Argélia;4;1;1;1;3;5;-2
+4;Jordânia;0;0;0;3;2;7;-5
+GRUPO K;;;;;;;;
+;;;;;;;;
+Posição;Equipe;Pts;V;E;D;GP;GC;SG
+1;Colômbia;7;2;1;0;6;3;3
+2;Portugal;5;1;2;0;5;2;3
+3;Congo;4;1;1;1;4;3;1
+4;Uzbequistão;0;0;0;3;2;11;-9
+GRUPO L;;;;;;;;
+;;;;;;;;
+Posição;Equipe;Pts;V;E;D;GP;GC;SG
+1;Inglaterra;7;2;1;0;6;2;4
+2;Croácia;6;2;0;1;5;5;0
+3;Gana;4;1;1;1;3;3;0
+4;Panamá;0;0;0;3;2;6;-4

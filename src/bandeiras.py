@@ -67,6 +67,7 @@ BANDEIRAS_ESPECIAIS: dict[str, str] = {
 ALIASES_TIMES: dict[str, str] = {
     "Curacau": "Curacao",
     "Paises Baixos": "Holanda",
+    "RD Congo": "Congo",
 }
 
 

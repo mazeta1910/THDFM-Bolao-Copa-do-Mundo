@@ -16,6 +16,7 @@ class TestGruposRanking(unittest.TestCase):
     def test_times_iguais_normaliza_alias(self):
         self.assertTrue(times_iguais("Holanda", "Países Baixos"))
         self.assertTrue(times_iguais("Curaçau", "Curação"))
+        self.assertTrue(times_iguais("Congo", "RD Congo"))
         self.assertFalse(times_iguais("Brasil", "Argentina"))
 
     def test_pontos_por_grupo(self):
