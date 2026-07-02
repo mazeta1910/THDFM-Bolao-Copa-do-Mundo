@@ -9,6 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 BASE_DATA_DIR = DATA_DIR / "base"
 FONTES_DATA_DIR = DATA_DIR / "fontes"
+PARTICIPANTES_DIR = DATA_DIR / "participantes"
+PARTICIPANTES_MANIFEST = PARTICIPANTES_DIR / "manifest.json"
 
 ARQUIVOS_BASE = (
     "bolao.csv",
@@ -76,6 +78,7 @@ def ensure_data_layout(data_dir: Path | None = None) -> list[str]:
     raiz.mkdir(parents=True, exist_ok=True)
     (raiz / "base").mkdir(parents=True, exist_ok=True)
     (raiz / "fontes").mkdir(parents=True, exist_ok=True)
+    (raiz / "participantes").mkdir(parents=True, exist_ok=True)
     return migrar_estrutura_data(raiz)
 
 

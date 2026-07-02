@@ -1,0 +1,31 @@
+{
+  "descricao": "Mapeamento nome no bolao -> arquivo base em data/participantes/ (sem extensao)",
+  "formato": "PNG, JPG, JPEG ou WEBP — use o que vier do celular; nao precisa converter",
+  "participantes": [
+    { "nome": "Alisson Ottoni", "arquivo": "Alisson" },
+    { "nome": "André Galinha", "arquivo": "Andre" },
+    { "nome": "Arthur SK", "arquivo": "Arthur" },
+    { "nome": "Ayrton", "arquivo": "Ayrton" },
+    { "nome": "Benevides", "arquivo": "Benevides" },
+    { "nome": "Diego Campos", "arquivo": "Diego" },
+    { "nome": "Emboava", "arquivo": "Emboava" },
+    { "nome": "Gabs", "arquivo": "Gabs" },
+    { "nome": "Gui", "arquivo": "Gui" },
+    { "nome": "Haron Bonamigo", "arquivo": "Haron" },
+    { "nome": "Hotel Plus Antonio Menezes", "arquivo": "Hotel" },
+    { "nome": "JV JEC", "arquivo": "JV" },
+    { "nome": "Jose Carlos", "arquivo": "Jose" },
+    { "nome": "Juan", "arquivo": "Juan" },
+    { "nome": "Lucas Copini", "arquivo": "Lucas" },
+    { "nome": "Marlon Wietzikoski", "arquivo": "Marlon" },
+    { "nome": "Matheus Honorato", "arquivo": "Matheus" },
+    { "nome": "Mazeta", "arquivo": "Mazeta" },
+    { "nome": "Meta AI", "arquivo": "Meta" },
+    { "nome": "Pylegend", "arquivo": "Pylegend" },
+    { "nome": "Ramos", "arquivo": "Ramos" },
+    { "nome": "Rodri", "arquivo": "Rodri" },
+    { "nome": "Rodrigo (DDD 95)", "arquivo": "Rodrigo" },
+    { "nome": "Til ponto", "arquivo": "Til" },
+    { "nome": "Xonha", "arquivo": "Xonha" }
+  ]
+}
