@@ -16,6 +16,7 @@ from src.loader import (
     validar_bolao,
 )
 from src.ranking import (
+    calcular_pontos_faixa,
     calcular_variacoes_da_rodada,
     calcular_variacoes_jogos,
     carregar_classificacao_referencia,
@@ -34,6 +35,7 @@ from src.ranking import (
     gerar_classificacao_premio_a,
     JOGOS_BASELINE_REFERENCIA_GERAL,
     legenda_pesos_fase,
+    legenda_pesos_jogos_linhas,
     jogos_recem_realizados,
     referencia_tem_secao_grupos_32avos,
     resolver_referencia_geral_csv,
@@ -53,6 +55,7 @@ from src.palpites_view import (
     listar_palpites_jogos,
 )
 from src.grupos_ranking import times_iguais
+from src.models import PontosJogo
 from src.scoring import FASE_GRUPOS_MAX
 from src.exports_manager import (
     atualizar_manifest,
@@ -579,6 +582,7 @@ def _exportar_png_fase(bolao, fase_id: str, path: Path) -> None:
         rodape=legenda_pesos_fase(fase_id),
         jogos_realizados=realizados,
         total_jogos=total,
+        fase_id=fase_id,
     )
 
 
@@ -780,7 +784,7 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
         variacoes = calcular_variacoes_jogos(bolao, set(jogo_ids_export))
         jogos_novos = resumir_jogos_export(bolao, jogo_ids_export)
         ids_txt = ", ".join(str(jogo_id) for jogo_id in jogo_ids_export)
-        legenda_rodada = f"Rod = pontos nos jogos {ids_txt} desta imagem"
+        legenda_rodada = f"TOTAL = pontos nos jogos {ids_txt} desta imagem"
 
     if not selecao.algum_export():
         print("Nenhum export selecionado.", file=sys.stderr)
@@ -907,15 +911,29 @@ def cmd_compartilhar(args: argparse.Namespace) -> int:
                 print(f"Jogos sem placar provisorio: {ids}", file=sys.stderr)
                 return 1
             rodada_path = RODADA_PNG
+            totais_rodada = calcular_pontos_faixa(bolao, set(jogo_ids))
+            destaques_rodada = {
+                nome: PontosJogo(
+                    placar=item.placar,
+                    vencedor=item.vencedor,
+                    gols_casa=item.gols_casa,
+                    gols_fora=item.gols_fora,
+                )
+                for nome, item in totais_rodada.items()
+            }
+            variacoes_rodada = {nome: item.soma for nome, item in totais_rodada.items()}
             exportar_rodada_completa_png(
                 classificacao,
                 blocos,
                 rodada_path,
                 jogos_realizados=realizados,
                 total_jogos=len(bolao.jogos),
-                variacoes=variacoes,
+                variacoes=variacoes_rodada,
                 mudancas_posicao=mudancas_posicao,
                 jogos_novos=jogos_novos or None,
+                destaques_rodada=destaques_rodada,
+                rodape_linhas=legenda_pesos_jogos_linhas(set(jogo_ids)),
+                omitir_breadcrumb=True,
             )
             ids_txt = ", ".join(str(jogo_id) for jogo_id in jogo_ids)
             descricoes_exports["rodada_png"] = f"Classificacao + provisorio (J{ids_txt})"

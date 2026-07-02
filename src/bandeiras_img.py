@@ -8,6 +8,7 @@ from src.flag_cache import garantir_bandeira
 LARGURA_BANDEIRA = 40
 ALTURA_BANDEIRA = 28
 ESPACO_ENTRE_BANDEIRAS = 8
+ESPACO_BANDEIRA_PLACAR = 6
 
 
 def _placeholder(iso: str):
@@ -51,6 +52,21 @@ def largura_confronto(fonte_x) -> int:
     return LARGURA_BANDEIRA + ESPACO_ENTRE_BANDEIRAS + largura_x + ESPACO_ENTRE_BANDEIRAS + LARGURA_BANDEIRA
 
 
+def largura_placar_bandeiras(gols_casa: int, gols_fora: int, *, fonte_placar) -> int:
+    from PIL import Image, ImageDraw
+
+    draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    texto = f"{gols_casa} x {gols_fora}"
+    largura_texto = int(draw.textlength(texto, font=fonte_placar))
+    return (
+        LARGURA_BANDEIRA
+        + ESPACO_BANDEIRA_PLACAR
+        + largura_texto
+        + ESPACO_BANDEIRA_PLACAR
+        + LARGURA_BANDEIRA
+    )
+
+
 def colar_confronto(
     imagem,
     centro_x: int,
@@ -84,4 +100,49 @@ def colar_confronto(
         anchor="mm",
     )
     x_fora = x_meio + largura_x + ESPACO_ENTRE_BANDEIRAS
+    imagem.paste(bandeira_fora, (x_fora, y_bandeira), bandeira_fora)
+
+
+def colar_placar_bandeiras(
+    imagem,
+    centro_x: int,
+    centro_y: int,
+    casa: str,
+    fora: str,
+    gols_casa: int,
+    gols_fora: int,
+    *,
+    fonte_placar,
+    cor_placar: tuple[int, int, int] = (255, 255, 255),
+) -> None:
+    from PIL import ImageDraw
+
+    iso_casa = iso_time(casa) or "XX"
+    iso_fora = iso_time(fora) or "XX"
+    bandeira_casa = imagem_bandeira(iso_casa)
+    bandeira_fora = imagem_bandeira(iso_fora)
+
+    draw = ImageDraw.Draw(imagem)
+    texto = f"{gols_casa} x {gols_fora}"
+    largura_texto = int(draw.textlength(texto, font=fonte_placar))
+    largura_total = (
+        LARGURA_BANDEIRA
+        + ESPACO_BANDEIRA_PLACAR
+        + largura_texto
+        + ESPACO_BANDEIRA_PLACAR
+        + LARGURA_BANDEIRA
+    )
+    x_inicio = centro_x - largura_total // 2
+    y_bandeira = centro_y - ALTURA_BANDEIRA // 2
+
+    imagem.paste(bandeira_casa, (x_inicio, y_bandeira), bandeira_casa)
+    x_texto = x_inicio + LARGURA_BANDEIRA + ESPACO_BANDEIRA_PLACAR
+    draw.text(
+        (x_texto + largura_texto // 2, centro_y),
+        texto,
+        font=fonte_placar,
+        fill=cor_placar,
+        anchor="mm",
+    )
+    x_fora = x_texto + largura_texto + ESPACO_BANDEIRA_PLACAR
     imagem.paste(bandeira_fora, (x_fora, y_bandeira), bandeira_fora)

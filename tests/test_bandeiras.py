@@ -6,7 +6,7 @@ from unittest.mock import patch
 from PIL import Image
 
 from src.bandeiras import iso_time
-from src.bandeiras_img import imagem_bandeira, largura_confronto
+from src.bandeiras_img import imagem_bandeira, largura_confronto, largura_placar_bandeiras
 from src.flag_cache import codigo_flagcdn, codigos_bandeira_necessarios
 
 
@@ -48,6 +48,12 @@ class TestBandeiras(unittest.TestCase):
 
         fonte = ImageFont.load_default()
         self.assertGreater(largura_confronto(fonte), 70)
+
+    def test_largura_placar_bandeiras(self):
+        from PIL import ImageFont
+
+        fonte = ImageFont.load_default()
+        self.assertGreater(largura_placar_bandeiras(3, 2, fonte_placar=fonte), 90)
 
 
 if __name__ == "__main__":

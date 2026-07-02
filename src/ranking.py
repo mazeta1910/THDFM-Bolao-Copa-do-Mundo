@@ -76,22 +76,94 @@ def gerar_classificacao_fase(bolao: BolaoData, fase_id: str) -> list[Classificac
     return gerar_classificacao_jogos_faixa(bolao, set(fase.jogos_ids))
 
 
-def legenda_pesos_fase(fase_id: str) -> str:
+def _texto_pesos_jogo(jogo_id: int) -> str:
+    from src.scoring import pesos_para_jogo
+
+    pesos = pesos_para_jogo(jogo_id)
+    return f"Placar {pesos.placar} | Vencedor {pesos.vencedor} | Gols {pesos.gols}"
+
+
+def _rotulo_faixa_pesos(jogo_id: int) -> str:
+    from src.scoring import (
+        DECIMA_SEXTAS_MAX,
+        FASE_GRUPOS_MAX,
+        FINAIS_MAX,
+        OITAVAS_MAX,
+        QUARTAS_MAX,
+        SEMIS_MAX,
+    )
+
+    if jogo_id <= FASE_GRUPOS_MAX:
+        return "Grupos (J1-J72)"
+    if jogo_id <= DECIMA_SEXTAS_MAX:
+        return "32 avos (J73-J88)"
+    if jogo_id <= OITAVAS_MAX:
+        return "Oitavas (J89-J96)"
+    if jogo_id <= QUARTAS_MAX:
+        return "Quartas (J97-J100)"
+    if jogo_id <= SEMIS_MAX:
+        return "Semifinais (J101-J102)"
+    if jogo_id <= FINAIS_MAX:
+        return "Finais (J103-J104)"
+    return f"Jogo {jogo_id}"
+
+
+def _detalhe_pesos(pesos) -> str:
+    return f"Placar: {pesos.placar} | Vencedor: {pesos.vencedor} | Gols: {pesos.gols}"
+
+
+def legenda_pesos_geral_linhas() -> list[tuple[str, str]]:
+    from src.scoring import pesos_para_jogo
+
+    g = pesos_para_jogo(1)
+    a = pesos_para_jogo(73)
+    o = pesos_para_jogo(89)
+    return [
+        ("PONTUAÇÕES GRUPOS (J1-J72):", _detalhe_pesos(g)),
+        ("PONTUAÇÕES 32 AVOS (J73-J88):", _detalhe_pesos(a)),
+        ("PONTUAÇÕES OITAVAS+ (J89+):", _detalhe_pesos(o)),
+    ]
+
+
+def legenda_pesos_fase_linhas(fase_id: str) -> list[tuple[str, str]]:
     from src.scoring import pesos_para_jogo
 
     if fase_id == "grupos_mais_32avos":
         g = pesos_para_jogo(1)
         a = pesos_para_jogo(73)
-        return (
-            f"Grupos J1-J72: Placar {g.placar} | Vencedor {g.vencedor} | Gols {g.gols} | "
-            f"32 avos J73-J88: Placar {a.placar} | Vencedor {a.vencedor} | Gols {a.gols}"
-        )
+        return [
+            ("PONTUAÇÕES GRUPOS (J1-J72):", _detalhe_pesos(g)),
+            ("PONTUAÇÕES 32 AVOS (J73-J88):", _detalhe_pesos(a)),
+        ]
     fase = FASES_BOLAO[fase_id]
     pesos = pesos_para_jogo(fase.jogo_pesos)
-    return (
-        f"Placar {pesos.placar} | Vencedor {pesos.vencedor} | "
-        f"Gols Casa/Fora {pesos.gols}"
-    )
+    if fase_id == "grupos":
+        titulo = "PONTUAÇÕES GRUPOS (J1-J72):"
+    elif fase_id == "32avos":
+        titulo = "PONTUAÇÕES 32 AVOS (J73-J88):"
+    else:
+        rotulo = fase.titulo.removeprefix("PONTUACAO PARCIAL - ")
+        titulo = f"PONTUAÇÕES {rotulo.upper()}:"
+    return [(titulo, _detalhe_pesos(pesos))]
+
+
+def legenda_pesos_jogos_linhas(jogo_ids: set[int]) -> list[tuple[str, str]]:
+    from src.scoring import pesos_para_jogo
+
+    blocos: list[tuple[str, str]] = []
+    vistos: set[str] = set()
+    for jogo_id in sorted(jogo_ids):
+        rotulo = _rotulo_faixa_pesos(jogo_id).upper()
+        titulo = f"PONTUAÇÕES {rotulo}:"
+        if titulo in vistos:
+            continue
+        vistos.add(titulo)
+        blocos.append((titulo, _detalhe_pesos(pesos_para_jogo(jogo_id))))
+    return blocos
+
+
+def legenda_pesos_fase(fase_id: str) -> str:
+    return "\n".join(f"{titulo} {detalhe}" for titulo, detalhe in legenda_pesos_fase_linhas(fase_id))
 
 
 def formatar_classificacao_fase_texto(
@@ -636,7 +708,7 @@ def formatar_classificacao_compartilhar(
     linhas.extend(
         [
             "",
-            legenda_rodada or "Rod = pontos nos jogos novos desde a ultima rodada confirmada",
+            legenda_rodada or "TOTAL = pontos nos jogos novos desde a ultima rodada confirmada",
             "Premiacao: 50% para lider de A, 50% para lider de B; 100% se liderar as duas",
             "A: grupos (10/time) + cravadura quando REAL OFICIAL estiver preenchido",
             "B: todos os jogos realizados (grupos 3/2/1, mata-mata conforme fase)",

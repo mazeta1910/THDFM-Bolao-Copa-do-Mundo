@@ -87,6 +87,22 @@ def iso_time(nome: str) -> str | None:
     return TIMES_ISO.get(chave)
 
 
+def sigla_time(nome: str) -> str:
+    codigo = iso_time(nome)
+    if codigo:
+        return codigo.upper()
+    return nome[:3].upper()
+
+
+def confronto_siglas_placar(
+    casa: str,
+    fora: str,
+    gols_casa: int,
+    gols_fora: int,
+) -> str:
+    return f"{sigla_time(casa)} {gols_casa} x {gols_fora} {sigla_time(fora)}"
+
+
 def bandeira_time(nome: str) -> str:
     chave = _chave_time(nome)
     if chave in BANDEIRAS_ESPECIAIS:

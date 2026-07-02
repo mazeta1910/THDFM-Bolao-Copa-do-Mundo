@@ -123,7 +123,10 @@ class TestClassificacaoSeparada(unittest.TestCase):
         bob = next(l for l in fase if l.participante == "Bob")
         self.assertEqual(ana.soma, 10)
         self.assertEqual(bob.gols_fora, 5)
-        self.assertEqual(legenda_pesos_fase("32avos"), "Placar 10 | Vencedor 7 | Gols Casa/Fora 5")
+        self.assertEqual(
+            legenda_pesos_fase("32avos"),
+            "PONTUAÇÕES 32 AVOS (J73-J88): Placar: 10 | Vencedor: 7 | Gols: 5",
+        )
         self.assertIn("32avos", FASES_BOLAO)
 
 
