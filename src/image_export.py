@@ -5,6 +5,13 @@ from pathlib import Path
 
 from src.models import ClassificacaoLinha, ClassificacaoPremioLinha
 from src.snapshot import formatar_mudanca_posicao, formatar_variacao
+from src.participantes_avatars import (
+    ALTURA_LINHA_AVATAR,
+    AVATAR_TAMANHO,
+    carregar_mapa_arquivos,
+    desenhar_avatar,
+    largura_extra_avatar,
+)
 
 # Paleta classificação (estilo planilha Excel THDFM)
 PAL_FUNDO = (18, 18, 18)
@@ -45,6 +52,56 @@ LARGURA_COL_SOMA = 46
 LARGURA_COL_VAR = 52
 PADDING_NOME = 16
 ESPACO_ENTRE_SECOES = 32
+
+_cache_mapa_fotos: dict[str, str] | None = None
+
+
+def _mapa_fotos_participantes() -> dict[str, str]:
+    global _cache_mapa_fotos
+    if _cache_mapa_fotos is None:
+        _cache_mapa_fotos = carregar_mapa_arquivos()
+    return _cache_mapa_fotos
+
+
+def _altura_linha_tabela() -> int:
+    return ALTURA_LINHA_AVATAR
+
+
+def _extra_coluna_participante() -> int:
+    return largura_extra_avatar()
+
+
+def _desenhar_participante_com_avatar(
+    imagem,
+    draw,
+    x_nome: int,
+    y: int,
+    altura_linha: int,
+    nome: str,
+    *,
+    cor_texto: tuple[int, int, int],
+    fonte,
+) -> None:
+    extra = _extra_coluna_participante()
+    ax = x_nome + PADDING_NOME
+    ay = y + (altura_linha - AVATAR_TAMANHO) // 2
+    desenhar_avatar(
+        imagem,
+        draw,
+        ax,
+        ay,
+        AVATAR_TAMANHO,
+        nome,
+        mapa=_mapa_fotos_participantes(),
+    )
+    draw.text(
+        (ax + extra, y + altura_linha // 2),
+        nome,
+        font=fonte,
+        fill=cor_texto,
+        anchor="lm",
+    )
+
 
 _COLUNAS_PONTOS = (
     ("Placar", "placar"),
@@ -165,15 +222,19 @@ def exportar_classificacao_fase_png(
 
 
 def _largura_nome(classificacao: list[ClassificacaoLinha], fonte) -> int:
+    nomes = [linha.participante.strip() for linha in classificacao]
+    return _largura_nome_participantes(nomes, fonte)
+
+
+def _largura_nome_participantes(nomes: list[str], fonte) -> int:
     from PIL import Image, ImageDraw
 
     draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
     largura = 180
-    for linha in classificacao:
-        nome = linha.participante.strip()
+    for nome in nomes:
         bbox = draw.textbbox((0, 0), nome, font=fonte)
         largura = max(largura, bbox[2] - bbox[0] + PADDING_NOME * 2)
-    return min(largura, 340)
+    return min(largura + _extra_coluna_participante(), 340 + _extra_coluna_participante())
 
 
 def _cor_fundo_zona_posicao(posicao: int) -> tuple[int, int, int]:
@@ -295,6 +356,8 @@ def renderizar_classificacao_png(
     from PIL import Image, ImageDraw
 
     fontes = _carregar_fontes()
+    extra_nome = _extra_coluna_participante()
+    altura_linha = _altura_linha_tabela()
     largura_nome = _largura_nome(classificacao, fontes["linha"])
     layout = _layout_classificacao(largura_nome, mostrar_rod=mostrar_rod, fonte_cab=fontes["cab"])
     largura = layout["largura_total"]
@@ -310,7 +373,7 @@ def renderizar_classificacao_png(
         + linhas_jogos * 22
         + (4 if linhas_jogos else 0)
         + ALTURA_TITULO_TABELA
-        + ALTURA_LINHA * len(classificacao)
+        + altura_linha * len(classificacao)
         + (0 if omitir_rodape else ALTURA_RODAPE)
         + MARGEM
     )
@@ -347,7 +410,7 @@ def renderizar_classificacao_png(
         anchor="mm",
     )
     draw.text(
-        (x_nome + PADDING_NOME, centro_cab),
+        (x_nome + PADDING_NOME + extra_nome, centro_cab),
         "Participante",
         font=fontes["cab"],
         fill=PAL_TEXTO_CAB,
@@ -386,8 +449,8 @@ def renderizar_classificacao_png(
             cor = PAL_LINHA_LIDER
         else:
             cor = PAL_LINHA_PAR if indice % 2 == 0 else PAL_LINHA_IMPAR
-        draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_LINHA), fill=cor)
-        draw.line((MARGEM, y + ALTURA_LINHA, largura - MARGEM, y + ALTURA_LINHA), fill=PAL_BORDA, width=1)
+        draw.rectangle((MARGEM, y, largura - MARGEM, y + altura_linha), fill=cor)
+        draw.line((MARGEM, y + altura_linha, largura - MARGEM, y + altura_linha), fill=PAL_BORDA, width=1)
 
         chave = linha.participante.strip()
         variacao = variacoes.get(chave)
@@ -395,22 +458,25 @@ def renderizar_classificacao_png(
         delta_pos = mudancas_posicao.get(chave)
         cor_texto = PAL_TEXTO_LIDER if eh_lider else PAL_TEXTO
 
-        centro_y = y + ALTURA_LINHA // 2
+        centro_y = y + altura_linha // 2
         _desenhar_coluna_posicao(
             draw,
             x_pos,
             y,
-            ALTURA_LINHA,
+            altura_linha,
             linha.posicao,
             delta_pos,
             fontes=fontes,
         )
-        draw.text(
-            (x_nome + PADDING_NOME, centro_y),
+        _desenhar_participante_com_avatar(
+            imagem,
+            draw,
+            x_nome,
+            y,
+            altura_linha,
             chave,
-            font=fontes["linha"],
-            fill=cor_texto,
-            anchor="lm",
+            cor_texto=cor_texto,
+            fonte=fontes["linha"],
         )
         for (_, campo), x_col, largura_col in zip(
             _COLUNAS_PONTOS, layout["pontos"], larguras_pontos, strict=True
@@ -448,7 +514,7 @@ def renderizar_classificacao_png(
                 fill=cor_var,
                 anchor="mm",
             )
-        y += ALTURA_LINHA
+        y += altura_linha
 
     if not omitir_rodape:
         texto_rodape = (
@@ -476,11 +542,13 @@ def renderizar_classificacao_resumida_png(
     from PIL import Image, ImageDraw
 
     fontes = _carregar_fontes()
+    extra_nome = _extra_coluna_participante()
+    altura_linha = _altura_linha_tabela()
     largura_nome = _largura_nome(classificacao, fontes["linha"])
     largura_col_pts = 52
     largura = MARGEM + LARGURA_COL_POS + largura_nome + largura_col_pts + MARGEM
     altura = (
-        MARGEM + 28 + ALTURA_TITULO_TABELA + ALTURA_LINHA * len(classificacao) + MARGEM
+        MARGEM + 28 + ALTURA_TITULO_TABELA + altura_linha * len(classificacao) + MARGEM
     )
     imagem = Image.new("RGB", (largura, altura), PAL_FUNDO)
     draw = ImageDraw.Draw(imagem)
@@ -494,7 +562,7 @@ def renderizar_classificacao_resumida_png(
     draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_TITULO_TABELA), fill=PAL_CABECALHO)
     for rotulo, x_col, anchor in (
         ("Pos", x_pos + LARGURA_COL_POS // 2, "mm"),
-        ("Participante", x_nome + PADDING_NOME, "lm"),
+        ("Participante", x_nome + PADDING_NOME + extra_nome, "lm"),
         ("Pts", x_pts + largura_col_pts // 2, "mm"),
     ):
         draw.text((x_col, centro_cab), rotulo, font=fontes["cab"], fill=PAL_TEXTO_CAB, anchor=anchor)
@@ -503,13 +571,22 @@ def renderizar_classificacao_resumida_png(
         cor = PAL_LINHA_LIDER if linha.posicao == 1 else (
             PAL_LINHA_PAR if indice % 2 == 0 else PAL_LINHA_IMPAR
         )
-        draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_LINHA), fill=cor)
-        centro_y = y + ALTURA_LINHA // 2
+        draw.rectangle((MARGEM, y, largura - MARGEM, y + altura_linha), fill=cor)
+        centro_y = y + altura_linha // 2
         nome = linha.participante.strip()
         draw.text((x_pos + LARGURA_COL_POS // 2, centro_y), str(linha.posicao), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
-        draw.text((x_nome + PADDING_NOME, centro_y), nome, font=fontes["linha"], fill=PAL_TEXTO, anchor="lm")
+        _desenhar_participante_com_avatar(
+            imagem,
+            draw,
+            x_nome,
+            y,
+            altura_linha,
+            nome,
+            cor_texto=PAL_TEXTO,
+            fonte=fontes["linha"],
+        )
         draw.text((x_pts + largura_col_pts // 2, centro_y), str(linha.soma), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
-        y += ALTURA_LINHA
+        y += altura_linha
     return imagem
 
 
@@ -521,23 +598,17 @@ def renderizar_premio_a_png(
     from PIL import Image, ImageDraw
 
     fontes = _carregar_fontes()
-    largura_nome = max(
-        180,
-        max(
-            int(ImageDraw.Draw(Image.new("RGB", (1, 1))).textlength(l.participante.strip(), font=fontes["linha"]))
-            + PADDING_NOME * 2
-            for l in classificacao
-        )
-        if classificacao
-        else 180,
-    )
+    extra_nome = _extra_coluna_participante()
+    altura_linha = _altura_linha_tabela()
+    nomes = [linha.participante.strip() for linha in classificacao]
+    largura_nome = _largura_nome_participantes(nomes, fontes["linha"])
     largura_col = 52
     largura = MARGEM + LARGURA_COL_POS + largura_nome + largura_col * 3 + MARGEM
     altura = (
         MARGEM
         + 28
         + ALTURA_TITULO_TABELA
-        + ALTURA_LINHA * len(classificacao)
+        + altura_linha * len(classificacao)
         + ALTURA_RODAPE
         + MARGEM
     )
@@ -563,7 +634,7 @@ def renderizar_premio_a_png(
     draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_TITULO_TABELA), fill=PAL_CABECALHO)
     for rotulo, x_col in (
         ("Pos", x_pos + LARGURA_COL_POS // 2),
-        ("Participante", x_nome + PADDING_NOME),
+        ("Participante", x_nome + PADDING_NOME + extra_nome),
         ("Grp", x_grp + largura_col // 2),
         ("Crav", x_crav + largura_col // 2),
         ("Pts", x_pts + largura_col // 2),
@@ -576,15 +647,24 @@ def renderizar_premio_a_png(
         cor = PAL_LINHA_LIDER if linha.posicao == 1 else (
             PAL_LINHA_PAR if indice % 2 == 0 else PAL_LINHA_IMPAR
         )
-        draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_LINHA), fill=cor)
-        centro_y = y + ALTURA_LINHA // 2
+        draw.rectangle((MARGEM, y, largura - MARGEM, y + altura_linha), fill=cor)
+        centro_y = y + altura_linha // 2
         nome = linha.participante.strip()
         draw.text((x_pos + LARGURA_COL_POS // 2, centro_y), str(linha.posicao), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
-        draw.text((x_nome + PADDING_NOME, centro_y), nome, font=fontes["linha"], fill=PAL_TEXTO, anchor="lm")
+        _desenhar_participante_com_avatar(
+            imagem,
+            draw,
+            x_nome,
+            y,
+            altura_linha,
+            nome,
+            cor_texto=PAL_TEXTO,
+            fonte=fontes["linha"],
+        )
         draw.text((x_grp + largura_col // 2, centro_y), str(linha.grupos), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
         draw.text((x_crav + largura_col // 2, centro_y), str(linha.cravadura), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
         draw.text((x_pts + largura_col // 2, centro_y), str(linha.soma), font=fontes["linha"], fill=PAL_TEXTO, anchor="mm")
-        y += ALTURA_LINHA
+        y += altura_linha
 
     draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_RODAPE), fill=PAL_FUNDO)
     draw.text(
