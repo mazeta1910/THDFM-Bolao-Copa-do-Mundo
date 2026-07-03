@@ -829,6 +829,7 @@ def combinar_imagens_vertical(imagens: list, *, espaco: int = ESPACO_ENTRE_SECOE
 
 
 ALTURA_BLOCO_JOGO = 24
+ALTURA_LINHA_GRUPO_PALPITES = 32
 ESPACO_ENTRE_COLUNAS = 16
 LARGURA_NOME_COL = 200
 LARGURA_COL_PALPITE = 80
@@ -1007,17 +1008,55 @@ def _centros_coluna_jogo(
     return x_pal, x_pen, x_pts
 
 
-def exportar_palpites_png(blocos, path: str | Path) -> None:
+def _altura_corpo_tabela_palpites(bloco, altura_linha: int) -> int:
+    from src.palpites_view import agrupar_linhas_palpites
+
+    grupos = agrupar_linhas_palpites(bloco.jogo, bloco.linhas)
+    linhas = sum(len(membros) for _, membros in grupos)
+    return linhas * altura_linha + len(grupos) * ALTURA_LINHA_GRUPO_PALPITES
+
+
+def _desenhar_faixa_grupo_palpite(
+    imagem,
+    draw,
+    *,
+    y: int,
+    largura: int,
+    grupo: str,
+    quantidade: int,
+    fontes,
+) -> None:
+    from src.bandeiras import iso_time
+    from src.bandeiras_img import ALTURA_BANDEIRA, LARGURA_BANDEIRA, imagem_bandeira
+    from src.palpites_view import EMPATE_GRUPO, EMPATE_SEM_PEN
+
+    altura = ALTURA_LINHA_GRUPO_PALPITES
+    draw.rectangle((MARGEM, y, largura - MARGEM, y + altura), fill=PAL_CABECALHO)
+    centro_y = y + altura // 2
+    x = MARGEM + 8
+    if grupo not in {EMPATE_GRUPO, EMPATE_SEM_PEN}:
+        bandeira = imagem_bandeira(iso_time(grupo) or "XX")
+        imagem.paste(bandeira, (x, centro_y - ALTURA_BANDEIRA // 2), bandeira)
+        x += LARGURA_BANDEIRA + 8
+    texto = f"{grupo.strip().upper()} ({quantidade})"
+    draw.text((x, centro_y), texto, font=fontes["cab"], fill=PAL_TITULO_LARANJA, anchor="lm")
+
+
+def _renderizar_tabela_palpites_png(blocos):
     from PIL import Image, ImageDraw
 
-    if not blocos:
-        raise ValueError("Nenhum jogo informado para exportar palpites.")
+    from src.palpites_view import agrupar_linhas_palpites
 
+    if len(blocos) != 1:
+        raise ValueError("Tabela de palpites agrupada exige exatamente um jogo por imagem.")
+
+    bloco = blocos[0]
     fontes = _carregar_fontes()
-    participantes = _participantes_alinhados(blocos)
+    grupos = agrupar_linhas_palpites(bloco.jogo, bloco.linhas)
+    participantes = [linha.participante.strip() for _, membros in grupos for linha in membros]
     largura_nome = _largura_nome_participantes(participantes, fontes["linha"])
-    larguras_jogos = [_largura_coluna_jogo(bloco, fontes) for bloco in blocos]
-    largura_jogos = sum(larguras_jogos) + max(0, len(blocos) - 1) * ESPACO_ENTRE_COLUNAS
+    larguras_jogos = [_largura_coluna_jogo(bloco, fontes)]
+    largura_jogos = larguras_jogos[0]
     largura = MARGEM * 2 + largura_nome + ESPACO_ENTRE_COLUNAS + largura_jogos
 
     altura_titulos_jogos = _ALTURA_TITULO_PADRAO
@@ -1026,7 +1065,7 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
         MARGEM
         + altura_titulos_jogos
         + ALTURA_TITULO_TABELA
-        + altura_linha * len(participantes)
+        + _altura_corpo_tabela_palpites(bloco, altura_linha)
         + MARGEM
     )
 
@@ -1036,14 +1075,7 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
     x_nome = MARGEM
     x_jogos = x_nome + largura_nome + ESPACO_ENTRE_COLUNAS
 
-    y = _desenhar_titulo_export_palpites(
-        draw,
-        blocos,
-        fontes=fontes,
-        y=y,
-        larguras_colunas=larguras_jogos,
-        x_jogos=x_jogos,
-    )
+    y = _desenhar_titulo_export_palpites(draw, blocos, fontes=fontes, y=y)
 
     draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_TITULO_TABELA), fill=PAL_CABECALHO)
     extra_nome = _extra_coluna_participante()
@@ -1055,65 +1087,68 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
         anchor="lm",
     )
 
-    x_atual = x_jogos
-    larguras_palpite = [_largura_max_palpite_bandeiras(bloco, fontes) for bloco in blocos]
-    for bloco, largura_col, largura_palpite in zip(blocos, larguras_jogos, larguras_palpite):
-        x_pal, x_pen, x_pts = _centros_coluna_jogo(
-            x_atual, largura_col, bloco.jogo, largura_palpite=largura_palpite
-        )
+    largura_col = larguras_jogos[0]
+    largura_palpite = _largura_max_palpite_bandeiras(bloco, fontes)
+    x_pal, x_pen, x_pts = _centros_coluna_jogo(
+        x_jogos, largura_col, bloco.jogo, largura_palpite=largura_palpite
+    )
+    draw.text(
+        (x_pal, y + ALTURA_TITULO_TABELA // 2),
+        "Palpite",
+        font=fontes["cab"],
+        fill=PAL_TEXTO_CAB,
+        anchor="mm",
+    )
+    if x_pen is not None:
         draw.text(
-            (x_pal, y + ALTURA_TITULO_TABELA // 2),
-            "Palpite",
+            (x_pen, y + ALTURA_TITULO_TABELA // 2),
+            "Pen.",
             font=fontes["cab"],
             fill=PAL_TEXTO_CAB,
             anchor="mm",
         )
-        if x_pen is not None:
-            draw.text(
-                (x_pen, y + ALTURA_TITULO_TABELA // 2),
-                "Pen.",
-                font=fontes["cab"],
-                fill=PAL_TEXTO_CAB,
-                anchor="mm",
-            )
-        if x_pts is not None:
-            draw.text(
-                (x_pts, y + ALTURA_TITULO_TABELA // 2),
-                "Pts",
-                font=fontes["cab"],
-                fill=PAL_TEXTO_CAB,
-                anchor="mm",
-            )
-        x_atual += largura_col + ESPACO_ENTRE_COLUNAS
-
-    y += ALTURA_TITULO_TABELA
-    mapas = [_mapa_palpites_por_nome(bloco) for bloco in blocos]
-
-    for indice, nome in enumerate(participantes):
-        cor = PAL_LINHA_PAR if indice % 2 == 0 else PAL_LINHA_IMPAR
-        draw.rectangle((MARGEM, y, largura - MARGEM, y + altura_linha), fill=cor)
-
-        _desenhar_participante_com_avatar(
-            imagem,
-            draw,
-            x_nome,
-            y,
-            altura_linha,
-            nome,
-            cor_texto=PAL_TEXTO,
-            fonte=fontes["linha"],
+    if x_pts is not None:
+        draw.text(
+            (x_pts, y + ALTURA_TITULO_TABELA // 2),
+            "Pts",
+            font=fontes["cab"],
+            fill=PAL_TEXTO_CAB,
+            anchor="mm",
         )
 
-        x_atual = x_jogos
-        for bloco, mapa, largura_col, largura_palpite in zip(
-            blocos, mapas, larguras_jogos, larguras_palpite
-        ):
-            linha = mapa[nome]
-            jogo = bloco.jogo
-            x_pal, x_pen, x_pts = _centros_coluna_jogo(
-                x_atual, largura_col, jogo, largura_palpite=largura_palpite
+    y += ALTURA_TITULO_TABELA
+    mapa = _mapa_palpites_por_nome(bloco)
+    indice_linha = 0
+
+    for grupo_nome, linhas_grupo in grupos:
+        _desenhar_faixa_grupo_palpite(
+            imagem,
+            draw,
+            y=y,
+            largura=largura,
+            grupo=grupo_nome,
+            quantidade=len(linhas_grupo),
+            fontes=fontes,
+        )
+        y += ALTURA_LINHA_GRUPO_PALPITES
+
+        for linha in linhas_grupo:
+            nome = linha.participante.strip()
+            cor = PAL_LINHA_PAR if indice_linha % 2 == 0 else PAL_LINHA_IMPAR
+            draw.rectangle((MARGEM, y, largura - MARGEM, y + altura_linha), fill=cor)
+
+            _desenhar_participante_com_avatar(
+                imagem,
+                draw,
+                x_nome,
+                y,
+                altura_linha,
+                nome,
+                cor_texto=PAL_TEXTO,
+                fonte=fontes["linha"],
             )
 
+            jogo = bloco.jogo
             placar_exato = (
                 jogo.realizado
                 and linha.palpite_casa == jogo.gols_casa
@@ -1167,11 +1202,22 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
                     fill=cor_pts,
                     anchor="mm",
                 )
-            x_atual += largura_col + ESPACO_ENTRE_COLUNAS
 
-        y += altura_linha
+            indice_linha += 1
+            y += altura_linha
 
-    path = Path(path)
+    return imagem
+
+
+def exportar_palpites_png(blocos, path: str | Path) -> None:
+    if not blocos:
+        raise ValueError("Nenhum jogo informado para exportar palpites.")
+
+    if len(blocos) == 1:
+        imagem = _renderizar_tabela_palpites_png(blocos)
+    else:
+        partes = [_renderizar_tabela_palpites_png([bloco]) for bloco in blocos]
+        imagem = combinar_imagens_vertical(partes)
     _salvar_png_export(imagem, path)
 
 

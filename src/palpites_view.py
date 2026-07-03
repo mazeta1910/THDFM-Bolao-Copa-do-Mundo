@@ -11,6 +11,65 @@ def _jogo_mata_mata(jogo: Jogo) -> bool:
     return jogo.id > FASE_GRUPOS_MAX
 
 
+EMPATE_GRUPO = "EMPATE"
+EMPATE_SEM_PEN = "EMPATE (sem pen.)"
+
+
+def rotulo_grupo_palpite(jogo: Jogo, linha: PalpiteLinha) -> str:
+    """Time previsto vencedor no palpite (ou rótulo de empate)."""
+    from src.bandeiras import _chave_time
+
+    if linha.palpite_casa > linha.palpite_fora:
+        return jogo.casa
+    if linha.palpite_fora > linha.palpite_casa:
+        return jogo.fora
+    if _jogo_mata_mata(jogo):
+        if linha.vencedor_penaltis:
+            pen = _chave_time(linha.vencedor_penaltis)
+            if pen == _chave_time(jogo.casa):
+                return jogo.casa
+            if pen == _chave_time(jogo.fora):
+                return jogo.fora
+            return linha.vencedor_penaltis.strip()
+        return EMPATE_SEM_PEN
+    return EMPATE_GRUPO
+
+
+def _ordem_grupos_palpite(jogo: Jogo, chaves: list[str]) -> list[str]:
+    preferida = [jogo.casa, EMPATE_GRUPO, EMPATE_SEM_PEN, jogo.fora]
+    vistos: set[str] = set()
+    ordem: list[str] = []
+    for chave in preferida:
+        if chave in chaves and chave not in vistos:
+            ordem.append(chave)
+            vistos.add(chave)
+    for chave in sorted(chaves, key=str.lower):
+        if chave not in vistos:
+            ordem.append(chave)
+            vistos.add(chave)
+    return ordem
+
+
+def agrupar_linhas_palpites(
+    jogo: Jogo,
+    linhas: list[PalpiteLinha],
+) -> list[tuple[str, list[PalpiteLinha]]]:
+    """Agrupa palpites pelo time previsto vencedor (casa, visitante ou empate)."""
+    por_grupo: dict[str, list[PalpiteLinha]] = {}
+    for linha in linhas:
+        grupo = rotulo_grupo_palpite(jogo, linha)
+        por_grupo.setdefault(grupo, []).append(linha)
+
+    resultado: list[tuple[str, list[PalpiteLinha]]] = []
+    for grupo in _ordem_grupos_palpite(jogo, list(por_grupo)):
+        membros = sorted(
+            por_grupo[grupo],
+            key=lambda linha: linha.participante.strip().lower(),
+        )
+        resultado.append((grupo, membros))
+    return resultado
+
+
 @dataclass
 class PalpiteLinha:
     participante: str

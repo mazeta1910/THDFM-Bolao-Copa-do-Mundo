@@ -4,15 +4,20 @@ from pathlib import Path
 from src.loader import aplicar_resultados_externos
 from src.models import BolaoData, Jogo, Palpite
 from src.palpites_view import (
+    EMPATE_GRUPO,
+    EMPATE_SEM_PEN,
+    PalpiteLinha,
     _jogo_mata_mata,
     _mapas_palpites_provisorio,
     _total_pontos_provisorio,
+    agrupar_linhas_palpites,
     formatar_palpites_provisorio_texto,
     formatar_palpites_texto,
     listar_palpites_jogos,
     nome_arquivo_palpites,
     nome_arquivo_rodada,
     participantes_ordenados_provisorio,
+    rotulo_grupo_palpite,
     rotulo_vencedor_jogo,
 )
 from src.thdfm_parser import parse_thdfm_csv
@@ -123,6 +128,45 @@ class TestPalpitesView(unittest.TestCase):
         self.assertIn("Ana", texto)
         linha_bob = next(l for l in blocos[0].linhas if l.participante == "Bob")
         self.assertEqual(linha_bob.penaltis_texto, "-")
+
+
+class TestAgrupamentoPalpites(unittest.TestCase):
+    def test_rotulo_vitoria_casa(self) -> None:
+        jogo = Jogo(id=1, data="", casa="Brasil", fora="Mexico", gols_casa=0, gols_fora=0)
+        linha = PalpiteLinha("Ana", 2, 0)
+        self.assertEqual(rotulo_grupo_palpite(jogo, linha), "Brasil")
+
+    def test_rotulo_vitoria_fora(self) -> None:
+        jogo = Jogo(id=1, data="", casa="Brasil", fora="Mexico", gols_casa=0, gols_fora=0)
+        linha = PalpiteLinha("Ana", 0, 1)
+        self.assertEqual(rotulo_grupo_palpite(jogo, linha), "Mexico")
+
+    def test_rotulo_empate_grupos(self) -> None:
+        jogo = Jogo(id=1, data="", casa="Brasil", fora="Mexico", gols_casa=0, gols_fora=0)
+        linha = PalpiteLinha("Ana", 1, 1)
+        self.assertEqual(rotulo_grupo_palpite(jogo, linha), EMPATE_GRUPO)
+
+    def test_rotulo_empate_mata_mata_com_pen(self) -> None:
+        jogo = Jogo(id=73, data="", casa="Canada", fora="Africa do Sul", gols_casa=0, gols_fora=0)
+        linha = PalpiteLinha("Ana", 0, 0, vencedor_penaltis="Canada")
+        self.assertEqual(rotulo_grupo_palpite(jogo, linha), "Canada")
+
+    def test_rotulo_empate_mata_mata_sem_pen(self) -> None:
+        jogo = Jogo(id=73, data="", casa="Canada", fora="Africa do Sul", gols_casa=0, gols_fora=0)
+        linha = PalpiteLinha("Ana", 0, 0)
+        self.assertEqual(rotulo_grupo_palpite(jogo, linha), EMPATE_SEM_PEN)
+
+    def test_agrupar_ordem_casa_empate_fora(self) -> None:
+        jogo = Jogo(id=1, data="", casa="Australia", fora="Egito", gols_casa=0, gols_fora=0)
+        linhas = [
+            PalpiteLinha("Zeca", 0, 2),
+            PalpiteLinha("Ana", 2, 0),
+            PalpiteLinha("Bob", 1, 1),
+        ]
+        grupos = agrupar_linhas_palpites(jogo, linhas)
+        self.assertEqual([nome for nome, _ in grupos], ["Australia", EMPATE_GRUPO, "Egito"])
+        self.assertEqual([linha.participante for linha in grupos[0][1]], ["Ana"])
+        self.assertEqual([linha.participante for linha in grupos[2][1]], ["Zeca"])
 
 
 if __name__ == "__main__":
