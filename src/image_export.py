@@ -852,24 +852,65 @@ def _participantes_alinhados(blocos) -> list[str]:
     return sorted(nomes, key=str.lower)
 
 
-def _largura_coluna_jogo(bloco, fontes: dict | None = None) -> int:
-    from src.bandeiras_img import largura_confronto
+def _largura_max_palpite_bandeiras(bloco, fontes) -> int:
+    from src.bandeiras_img import largura_placar_bandeiras
 
-    largura = LARGURA_COL_PALPITE
+    if not bloco.linhas:
+        return LARGURA_COL_PALPITE
+    return max(
+        largura_placar_bandeiras(
+            linha.palpite_casa,
+            linha.palpite_fora,
+            fonte_placar=fontes["linha"],
+        )
+        for linha in bloco.linhas
+    )
+
+
+def _desenhar_palpite_com_bandeiras(
+    imagem,
+    centro_x: int,
+    centro_y: int,
+    jogo,
+    linha,
+    *,
+    fontes,
+    cor_texto: tuple[int, int, int] = PAL_TEXTO,
+) -> None:
+    from src.bandeiras_img import colar_placar_bandeiras
+
+    colar_placar_bandeiras(
+        imagem,
+        centro_x,
+        centro_y,
+        jogo.casa,
+        jogo.fora,
+        linha.palpite_casa,
+        linha.palpite_fora,
+        fonte_placar=fontes["linha"],
+        cor_placar=cor_texto,
+    )
+
+
+def _largura_coluna_jogo(bloco, fontes: dict | None = None) -> int:
+    largura_palpite = LARGURA_COL_PALPITE
+    if fontes is not None:
+        from PIL import Image, ImageDraw
+
+        draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+        largura_palpite = _largura_max_palpite_bandeiras(bloco, fontes)
+        largura_rotulo = int(draw.textlength("Palpite", font=fontes["cab"])) + 16
+    else:
+        largura_rotulo = LARGURA_COL_PALPITE
+
+    largura = largura_palpite
     if _jogo_mata_mata_palpites(bloco.jogo):
         largura += LARGURA_COL_PEN_PALPITE
     if bloco.jogo.realizado:
         largura += LARGURA_COL_PTS_PALPITE
 
     if fontes is not None:
-        from PIL import Image, ImageDraw
-
-        draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
-        largura_bandeiras = largura_confronto(fontes["confronto"])
-        largura_rotulo = int(draw.textlength("Palpite", font=fontes["cab"])) + 16
-        if _jogo_mata_mata_palpites(bloco.jogo):
-            largura_rotulo += LARGURA_COL_PEN_PALPITE
-        largura = max(largura, largura_bandeiras, largura_rotulo, LARGURA_MIN_JOGO)
+        largura = max(largura, largura_palpite, largura_rotulo, LARGURA_MIN_JOGO)
 
     return largura
 
@@ -881,40 +922,93 @@ def _encurtar_texto(draw, texto: str, fonte, largura_max: int) -> str:
     return resultado
 
 
+def _titulo_palpites_jogo(jogo) -> str:
+    casa = jogo.casa.strip().upper()
+    fora = jogo.fora.strip().upper()
+    return f"PALPITES - JOGO {jogo.id}: {casa} X {fora}"
+
+
+def _desenhar_titulo_export_palpites(
+    draw,
+    blocos,
+    *,
+    fontes,
+    y: int,
+    layouts: list | None = None,
+    larguras_colunas: list[int] | None = None,
+    x_jogos: int | None = None,
+    mesclar_titulo_jogo: bool = False,
+) -> int:
+    altura = _ALTURA_TITULO_PADRAO
+    fonte = fontes[_FONTE_TITULO_PADRAO]
+    cor = PAL_TITULO_LARANJA
+
+    if mesclar_titulo_jogo:
+        for bloco, layout in zip(blocos, layouts or []):
+            centro = layout.x + layout.largura // 2
+            draw.text(
+                (centro, y + altura // 2),
+                f"JOGO {bloco.jogo.id}",
+                font=fonte,
+                fill=cor,
+                anchor="mm",
+            )
+        return y + altura
+
+    if len(blocos) == 1:
+        draw.text(
+            (MARGEM, y),
+            _titulo_palpites_jogo(blocos[0].jogo),
+            font=fonte,
+            fill=cor,
+            anchor="la",
+        )
+        return y + altura
+
+    x_atual = x_jogos or MARGEM
+    for bloco, largura_col in zip(blocos, larguras_colunas or []):
+        centro = x_atual + largura_col // 2
+        draw.text(
+            (centro, y + altura // 2),
+            f"JOGO {bloco.jogo.id}",
+            font=fonte,
+            fill=cor,
+            anchor="mm",
+        )
+        x_atual += largura_col + ESPACO_ENTRE_COLUNAS
+    return y + altura
+
+
 def _centros_coluna_jogo(
     x_atual: int,
     largura_col: int,
     jogo,
+    *,
+    largura_palpite: int | None = None,
 ) -> tuple[int, int | None, int | None]:
     tem_pen = _jogo_mata_mata_palpites(jogo)
     realizado = jogo.realizado
-    largura_bloco = LARGURA_COL_PALPITE
+    if largura_palpite is None:
+        largura_palpite = LARGURA_COL_PALPITE
+    largura_bloco = largura_palpite
     if tem_pen:
         largura_bloco += LARGURA_COL_PEN_PALPITE
     if realizado:
         largura_bloco += LARGURA_COL_PTS_PALPITE
     x_bloco = x_atual + (largura_col - largura_bloco) // 2
-    x_pal = x_bloco + LARGURA_COL_PALPITE // 2
+    x_pal = x_bloco + largura_palpite // 2
     x_pen = None
     if tem_pen:
-        x_pen = x_bloco + LARGURA_COL_PALPITE + LARGURA_COL_PEN_PALPITE // 2
+        x_pen = x_bloco + largura_palpite + LARGURA_COL_PEN_PALPITE // 2
     x_pts = None
     if realizado:
-        offset_pts = LARGURA_COL_PALPITE + (LARGURA_COL_PEN_PALPITE if tem_pen else 0)
+        offset_pts = largura_palpite + (LARGURA_COL_PEN_PALPITE if tem_pen else 0)
         x_pts = x_bloco + offset_pts + LARGURA_COL_PTS_PALPITE // 2
     return x_pal, x_pen, x_pts
 
 
 def exportar_palpites_png(blocos, path: str | Path) -> None:
-    if blocos and all(bloco.jogo.realizado for bloco in blocos):
-        exportar_palpites_provisorios_png(blocos, path)
-        return
-
     from PIL import Image, ImageDraw
-
-    from src.bandeiras import titulo_jogo_bandeiras
-    from src.bandeiras_img import ALTURA_BANDEIRA, colar_confronto
-    from src.palpites_view import _resultado_jogo
 
     if not blocos:
         raise ValueError("Nenhum jogo informado para exportar palpites.")
@@ -926,9 +1020,7 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
     largura_jogos = sum(larguras_jogos) + max(0, len(blocos) - 1) * ESPACO_ENTRE_COLUNAS
     largura = MARGEM * 2 + largura_nome + ESPACO_ENTRE_COLUNAS + largura_jogos
 
-    tem_resultado = any(bloco.jogo.realizado for bloco in blocos)
-    altura_bandeiras = ALTURA_BANDEIRA + 10
-    altura_titulos_jogos = 22 + altura_bandeiras + (20 if tem_resultado else 0)
+    altura_titulos_jogos = _ALTURA_TITULO_PADRAO
     altura_linha = _altura_linha_tabela()
     altura = (
         MARGEM
@@ -943,35 +1035,15 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
     y = MARGEM
     x_nome = MARGEM
     x_jogos = x_nome + largura_nome + ESPACO_ENTRE_COLUNAS
-    x_atual = x_jogos
 
-    for bloco, largura_col in zip(blocos, larguras_jogos):
-        titulo, _ = titulo_jogo_bandeiras(
-            bloco.jogo.id, bloco.jogo.casa, bloco.jogo.fora
-        )
-        centro = x_atual + largura_col // 2
-        draw.text((centro, y), titulo, font=fontes["sub"], fill=PAL_TEXTO_SUAVE, anchor="mm")
-        colar_confronto(
-            imagem,
-            centro,
-            y + 22 + ALTURA_BANDEIRA // 2,
-            bloco.jogo.casa,
-            bloco.jogo.fora,
-            fonte_x=fontes["confronto"],
-            cor_x=PAL_TEXTO,
-        )
-        resultado = _resultado_jogo(bloco.jogo)
-        if resultado:
-            draw.text(
-                (centro, y + 22 + altura_bandeiras),
-                resultado,
-                font=fontes["sub"],
-                fill=PAL_TEXTO_SUAVE,
-                anchor="mm",
-            )
-        x_atual += largura_col + ESPACO_ENTRE_COLUNAS
-
-    y += altura_titulos_jogos
+    y = _desenhar_titulo_export_palpites(
+        draw,
+        blocos,
+        fontes=fontes,
+        y=y,
+        larguras_colunas=larguras_jogos,
+        x_jogos=x_jogos,
+    )
 
     draw.rectangle((MARGEM, y, largura - MARGEM, y + ALTURA_TITULO_TABELA), fill=PAL_CABECALHO)
     extra_nome = _extra_coluna_participante()
@@ -984,8 +1056,11 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
     )
 
     x_atual = x_jogos
-    for bloco, largura_col in zip(blocos, larguras_jogos):
-        x_pal, x_pen, x_pts = _centros_coluna_jogo(x_atual, largura_col, bloco.jogo)
+    larguras_palpite = [_largura_max_palpite_bandeiras(bloco, fontes) for bloco in blocos]
+    for bloco, largura_col, largura_palpite in zip(blocos, larguras_jogos, larguras_palpite):
+        x_pal, x_pen, x_pts = _centros_coluna_jogo(
+            x_atual, largura_col, bloco.jogo, largura_palpite=largura_palpite
+        )
         draw.text(
             (x_pal, y + ALTURA_TITULO_TABELA // 2),
             "Palpite",
@@ -1030,10 +1105,14 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
         )
 
         x_atual = x_jogos
-        for bloco, mapa, largura_col in zip(blocos, mapas, larguras_jogos):
+        for bloco, mapa, largura_col, largura_palpite in zip(
+            blocos, mapas, larguras_jogos, larguras_palpite
+        ):
             linha = mapa[nome]
             jogo = bloco.jogo
-            x_pal, x_pen, x_pts = _centros_coluna_jogo(x_atual, largura_col, jogo)
+            x_pal, x_pen, x_pts = _centros_coluna_jogo(
+                x_atual, largura_col, jogo, largura_palpite=largura_palpite
+            )
 
             placar_exato = (
                 jogo.realizado
@@ -1041,12 +1120,14 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
                 and linha.palpite_fora == jogo.gols_fora
             )
             cor_palpite = PAL_DESTAQUE if placar_exato else PAL_TEXTO
-            draw.text(
-                (x_pal, y + altura_linha // 2),
-                linha.placar_texto,
-                font=fontes["linha"],
-                fill=cor_palpite,
-                anchor="mm",
+            _desenhar_palpite_com_bandeiras(
+                imagem,
+                x_pal,
+                y + altura_linha // 2,
+                jogo,
+                linha,
+                fontes=fontes,
+                cor_texto=cor_palpite,
             )
 
             if x_pen is not None:
@@ -1376,13 +1457,15 @@ def renderizar_palpites_provisorios_png(
         centro = layout.x + layout.largura // 2
         if mesclar_titulo_jogo:
             titulo = f"JOGO {bloco.jogo.id}"
-            cor_titulo = PAL_TITULO_LARANJA
-            fonte_titulo = fontes[_FONTE_TITULO_PADRAO]
         else:
             titulo, _ = titulo_jogo_bandeiras(bloco.jogo.id, bloco.jogo.casa, bloco.jogo.fora)
-            cor_titulo = PAL_TITULO_LARANJA
-            fonte_titulo = fontes[_FONTE_TITULO_PADRAO]
-        draw.text((centro, y + altura_titulos_jogos // 2), titulo, font=fonte_titulo, fill=cor_titulo, anchor="mm")
+        draw.text(
+            (centro, y + altura_titulos_jogos // 2),
+            titulo,
+            font=fontes[_FONTE_TITULO_PADRAO],
+            fill=PAL_TITULO_LARANJA,
+            anchor="mm",
+        )
 
     y += altura_titulos_jogos
 
