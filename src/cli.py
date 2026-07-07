@@ -219,7 +219,7 @@ def _tabelas_mata_mata(bolao) -> tuple[list | None, list | None]:
         return None, None
     return (
         gerar_classificacao_32avos(bolao),
-        _classificacao_jogos(bolao),
+        gerar_classificacao_grupos_mais_32avos(bolao),
     )
 
 

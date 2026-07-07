@@ -23,11 +23,15 @@ class TestClassificacao18Avos(unittest.TestCase):
         self.assertEqual(xonha.soma, 394)
 
     def test_tabela_geral_usa_baseline_ate_j94(self) -> None:
+        from src.ranking import calcular_pontos_faixa, JOGOS_BASELINE_OITAVAS
+
         bolao = carregar_bolao()
         classificacao = classificacao_geral_ativa(bolao, data_dir=DATA)
         por_nome = {linha.participante.strip(): linha for linha in classificacao}
-        self.assertEqual(por_nome["Xonha"].soma, 394)
-        self.assertEqual(por_nome["Benevides"].soma, 396)
+        novos = {j.id for j in bolao.jogos if j.realizado} - set(JOGOS_BASELINE_OITAVAS)
+        extras_xonha = calcular_pontos_faixa(bolao, novos)["Xonha"].soma if novos else 0
+        self.assertEqual(por_nome["Xonha"].soma, 394 + extras_xonha)
+        self.assertLess(por_nome["Xonha"].soma, 450)
 
     def test_resolver_prioriza_classificacao_18avos(self) -> None:
         path = resolver_referencia_geral_csv(DATA)

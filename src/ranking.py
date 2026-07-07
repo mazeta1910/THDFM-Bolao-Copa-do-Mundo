@@ -28,6 +28,12 @@ def _chave_participante(participante: str) -> str:
     return participante.strip()
 
 
+def _chave_mesclagem(participante: str) -> str:
+    from src.bandeiras import _normalizar
+
+    return _normalizar(participante).strip().lower()
+
+
 def _carregar_pontos_grupos(
     classificacoes_reais_path: str | Path | None,
     palpites_grupos_path: str | Path | None,
@@ -380,9 +386,9 @@ def obter_classificacao(
 def _totais_da_base(base: list[ClassificacaoLinha]) -> dict[str, PontosParticipante]:
     totais: dict[str, PontosParticipante] = {}
     for linha in base:
-        chave = linha.participante.strip()
+        chave = _chave_mesclagem(linha.participante)
         totais[chave] = PontosParticipante(
-            participante=linha.participante,
+            participante=linha.participante.strip(),
             placar=linha.placar,
             vencedor=linha.vencedor,
             gols_casa=linha.gols_casa,
@@ -408,9 +414,11 @@ def aplicar_jogos_novos(
 
     totais = _totais_da_base(base)
     for nome in bolao.participantes:
-        chave = nome.strip()
+        chave = _chave_mesclagem(nome)
         if chave not in totais:
-            totais[chave] = PontosParticipante(participante=nome)
+            totais[chave] = PontosParticipante(participante=nome.strip())
+        else:
+            totais[chave].participante = nome.strip()
 
     jogos_por_id = {jogo.id: jogo for jogo in bolao.jogos}
     for palpite in bolao.palpites:
@@ -419,12 +427,17 @@ def aplicar_jogos_novos(
         jogo = jogos_por_id[palpite.jogo_id]
         if not jogo.realizado:
             continue
-        chave = palpite.participante.strip()
+        chave = _chave_mesclagem(palpite.participante)
         if chave not in totais:
-            totais[chave] = PontosParticipante(participante=palpite.participante)
+            totais[chave] = PontosParticipante(participante=palpite.participante.strip())
         totais[chave].adicionar(_pontos_palpite_jogo(jogo, palpite))
 
-    return _classificacao_de_totais(totais)
+    saida = {
+        nome.strip(): totais[_chave_mesclagem(nome)]
+        for nome in bolao.participantes
+        if _chave_mesclagem(nome) in totais
+    }
+    return _classificacao_de_totais(saida)
 
 
 def classificacao_ativa(
