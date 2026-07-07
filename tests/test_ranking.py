@@ -197,6 +197,19 @@ class TestSugerirJogosProvisorios(unittest.TestCase):
         bolao = self._bolao_tres_jogos()
         self.assertEqual(sugerir_jogos_provisorios(bolao, {1, 2}, limite=2), [3])
 
+    def test_sugere_proximos_pendentes_quando_baseline_em_dia(self):
+        bolao = BolaoData(
+            jogos=[
+                Jogo(id=1, casa="A", fora="B", data="01/01", gols_casa=1, gols_fora=0),
+                Jogo(id=2, casa="C", fora="D", data="02/01", gols_casa=2, gols_fora=2),
+                Jogo(id=3, casa="E", fora="F", data="03/01", gols_casa=None, gols_fora=None),
+                Jogo(id=4, casa="G", fora="H", data="04/01", gols_casa=None, gols_fora=None),
+            ],
+            participantes=["Ana"],
+            palpites=[],
+        )
+        self.assertEqual(sugerir_jogos_provisorios(bolao, {1, 2}, limite=2), [3, 4])
+
     def test_retorna_ultimos_com_placar_sem_jogos_novos(self):
         bolao = self._bolao_tres_jogos()
         self.assertEqual(sugerir_jogos_provisorios(bolao, {1, 2, 3}, limite=2), [2, 3])

@@ -36,9 +36,9 @@ def _resultados_preenchidos() -> bool:
 class TestThdfmParser(unittest.TestCase):
     def test_extrai_jogos_e_participantes(self):
         bolao = parse_thdfm_csv(BOLAO_PATH)
-        self.assertEqual(len(bolao.jogos), 88)
+        self.assertEqual(len(bolao.jogos), 96)
         self.assertEqual(len(bolao.participantes), 25)
-        self.assertEqual(len(bolao.palpites), 88 * 25)
+        self.assertEqual(len(bolao.palpites), 96 * 25)
 
     def test_primeiro_jogo(self):
         bolao = parse_thdfm_csv(BOLAO_PATH)
@@ -56,9 +56,9 @@ class TestThdfmParser(unittest.TestCase):
 
     def test_jogo_sem_resultado(self):
         bolao = parse_thdfm_csv(BOLAO_PATH)
-        jogo88 = bolao.jogos[-1]
-        self.assertEqual(jogo88.id, 88)
-        self.assertFalse(jogo88.realizado)
+        jogo96 = bolao.jogos[-1]
+        self.assertEqual(jogo96.id, 96)
+        self.assertFalse(jogo96.realizado)
 
 
 @unittest.skipUnless(

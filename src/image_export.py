@@ -1217,7 +1217,7 @@ def exportar_palpites_png(blocos, path: str | Path) -> None:
         imagem = _renderizar_tabela_palpites_png(blocos)
     else:
         partes = [_renderizar_tabela_palpites_png([bloco]) for bloco in blocos]
-        imagem = combinar_imagens_vertical(partes)
+        imagem = combinar_imagens_horizontal(partes, alinhar_topo=True)
     _salvar_png_export(imagem, path)
 
 

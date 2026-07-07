@@ -22,7 +22,9 @@ class TestReferenciaGeral(unittest.TestCase):
 
     def test_tabela_geral_usa_referencia_ate_j79(self) -> None:
         bolao = carregar_bolao()
-        classificacao = classificacao_geral_ativa(bolao, data_dir=DATA)
+        classificacao = classificacao_geral_ativa(
+            bolao, importada_path=REFERENCIA, data_dir=DATA
+        )
         por_nome = {linha.participante.strip(): linha for linha in classificacao}
         self.assertEqual(por_nome["Juan"].soma, 219)
         self.assertEqual(por_nome["Mazeta"].soma, 194)

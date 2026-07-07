@@ -33,12 +33,13 @@ from src.ranking import (
     gerar_classificacao_grupos_mais_32avos,
     gerar_classificacao_jogos,
     gerar_classificacao_premio_a,
-    JOGOS_BASELINE_REFERENCIA_GERAL,
     legenda_pesos_fase,
     legenda_pesos_jogos_linhas,
     jogos_recem_realizados,
     referencia_tem_secao_grupos_32avos,
+    referencia_tem_secao_oitavas,
     resolver_referencia_geral_csv,
+    resolver_secao_e_baseline_referencia,
     resumir_jogos_export,
     sugerir_jogos_provisorios,
 )
@@ -90,6 +91,7 @@ except ImportError:
 
 from src.data_paths import (
     BOLAO_CSV,
+    CLASSIFICACAO_18AVOS_CSV,
     CLASSIFICACOES_REAIS_CSV,
     CRAVADURA_CSV,
     DATA_DIR,
@@ -180,9 +182,9 @@ def _carregar_baseline_variacao() -> tuple[dict[str, dict] | None, set[int], boo
         REFERENCIA_CSV, "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv"
     )
     if referencia_path.exists():
-        secao = "grupos_32avos" if referencia_tem_secao_grupos_32avos(referencia_path) else "grupos"
+        secao, baseline = resolver_secao_e_baseline_referencia(referencia_path)
         referencia = carregar_classificacao_referencia(referencia_path, secao=secao)
-        return snapshot_de_classificacao(referencia), set(JOGOS_BASELINE_REFERENCIA_GERAL), False
+        return snapshot_de_classificacao(referencia), set(baseline), False
 
     return None, set(), False
 
@@ -192,12 +194,11 @@ def _resolver_referencia_geral() -> Path | None:
 
 
 def _classificacao_jogos(bolao) -> list:
-    """Classificacao B: tabela geral (grupos + 32 avos), referencia Excel + jogos novos."""
+    """Classificacao B: referencia importada + jogos novos desde a baseline da fase."""
     ref = _resolver_referencia_geral()
     return classificacao_geral_ativa(
         bolao,
         importada_path=ref,
-        jogos_ids_baseline=set(JOGOS_BASELINE_REFERENCIA_GERAL),
         data_dir=DATA_DIR,
     )
 
@@ -344,11 +345,16 @@ def cmd_importar_referencia(args: argparse.Namespace) -> int:
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     ensure_data_layout(DATA_DIR)
-    destino = REFERENCIA_GERAL_CSV if referencia_tem_secao_grupos_32avos(origem) else REFERENCIA_CSV
+    if referencia_tem_secao_oitavas(origem) or origem.name == "classificacao_18avos.csv":
+        destino = CLASSIFICACAO_18AVOS_CSV
+    elif referencia_tem_secao_grupos_32avos(origem):
+        destino = REFERENCIA_GERAL_CSV
+    else:
+        destino = REFERENCIA_CSV
     destino.parent.mkdir(parents=True, exist_ok=True)
     if origem.resolve() != destino.resolve():
         shutil.copy2(origem, destino)
-    secao = "grupos_32avos" if referencia_tem_secao_grupos_32avos(destino) else "grupos"
+    secao, baseline = resolver_secao_e_baseline_referencia(destino)
     classificacao = carregar_classificacao_referencia(destino, secao=secao)
     print(
         f"Classificação importada: {len(classificacao)} participantes em {destino.name}"
@@ -357,7 +363,7 @@ def cmd_importar_referencia(args: argparse.Namespace) -> int:
 
     bolao = carregar_bolao()
     realizados = sum(1 for j in bolao.jogos if j.realizado)
-    jogos_ids = sorted(JOGOS_BASELINE_REFERENCIA_GERAL & {j.id for j in bolao.jogos if j.realizado})
+    jogos_ids = sorted(baseline & {j.id for j in bolao.jogos if j.realizado})
     if not jogos_ids:
         jogos_ids = [jogo.id for jogo in bolao.jogos if jogo.realizado]
     salvar_snapshot(

@@ -1,114 +1,212 @@
 participante,jogo_id,time_passa
-Benevides,73,Canadá
-Diego Campos,73,Canadá
-Haron Bonamigo,73,Canadá
-JV JEC,73,África do Sul
-Matheus Honorato,73,Canadá
-Meta AI,73,África do Sul
-Haron Bonamigo,74,Alemanha
-Hotel Plus Antonio Menezes,74,Alemanha
-Matheus Honorato,74,Alemanha
-Arthur SK,75,Holanda
-Emboava,75,Holanda
-Gabs,75,Holanda
-Gui,75,Holanda
-Haron Bonamigo,75,Holanda
-Jose Carlos,75,Marrocos
-Lucas Copini,75,Holanda
-Marlon Wietzikoski,75,Marrocos
-Matheus Honorato,75,Holanda
-Ramos,75,Holanda
-Rodri,75,Holanda
-Rodrigo (DDD 95),75,Holanda
-Haron Bonamigo,76,Brasil
-Matheus Honorato,76,Brasil
-Haron Bonamigo,77,França
-Hotel Plus Antonio Menezes,77,França
-Matheus Honorato,77,França
-Meta AI,77,França
-Gabs,78,Noruega
-Haron Bonamigo,78,Noruega
-JV JEC,78,Noruega
-Matheus Honorato,78,Costa do Marfim
-Pylegend,78,Costa do Marfim
-Xonha,78,Noruega
-André Galinha,79,México
-Arthur SK,79,México
-Ayrton,79,México
-Diego Campos,79,Equador
-Emboava,79,México
-Haron Bonamigo,79,México
-Hotel Plus Antonio Menezes,79,México
-Jose Carlos,79,México
-Lucas Copini,79,México
-Marlon Wietzikoski,79,Equador
-Matheus Honorato,79,México
-Meta AI,79,México
-Pylegend,79,Equador
-Rodrigo (DDD 95),79,Equador
-Til ponto,79,México
-Xonha,79,Equador
-Haron Bonamigo,80,Inglaterra
-Matheus Honorato,80,Inglaterra
-Gabs,81,Estados Unidos
-Haron Bonamigo,81,Estados Unidos
-Marlon Wietzikoski,81,Estados Unidos
-Matheus Honorato,81,Estados Unidos
-Rodri,81,Estados Unidos
-Rodrigo (DDD 95),81,Estados Unidos
-Alisson Ottoni,82,Senegal
-Arthur SK,82,Senegal
-Gui,82,Senegal
-Haron Bonamigo,82,Bélgica
-Matheus Honorato,82,Senegal
-Mazeta,82,Senegal
-Meta AI,82,Bélgica
-Rodrigo (DDD 95),82,Senegal
-Til ponto,82,Senegal
-Xonha,82,Bélgica
-Alisson Ottoni,83,Portugal
-Ayrton,83,Portugal
-Diego Campos,83,Portugal
-Gabs,83,Portugal
-Haron Bonamigo,83,Portugal
-Hotel Plus Antonio Menezes,83,Portugal
-JV JEC,83,Portugal
-Matheus Honorato,83,Croácia
-Meta AI,83,Croácia
-Ramos,83,Portugal
-Rodri,83,Portugal
-Til ponto,83,Portugal
-Haron Bonamigo,84,Espanha
-Marlon Wietzikoski,84,Espanha
-Matheus Honorato,84,Espanha
-Ramos,84,Áustria
-André Galinha,85,Argélia
-Benevides,85,Argélia
-Diego Campos,85,Suíça
-Emboava,85,Suíça
-Haron Bonamigo,85,Suíça
-Jose Carlos,85,Suíça
-Lucas Copini,85,Argélia
-Marlon Wietzikoski,85,Suíça
-Matheus Honorato,85,Argélia
-Mazeta,85,Suíça
-Rodri,85,Argélia
-Til ponto,85,Suíça
-Haron Bonamigo,86,Argentina
-Matheus Honorato,86,Argentina
-Ramos,86,Cabo Verde
-Rodrigo (DDD 95),86,Cabo Verde
-Haron Bonamigo,87,Colômbia
-Hotel Plus Antonio Menezes,87,Colômbia
-JV JEC,87,Gana
-Matheus Honorato,87,Colômbia
-Rodrigo (DDD 95),87,Colômbia
-Arthur SK,88,Egito
-Benevides,88,Egito
-Emboava,88,Austrália
-Gabs,88,Egito
-Haron Bonamigo,88,Austrália
-Matheus Honorato,88,Egito
-Mazeta,88,Austrália
-Til ponto,88,Egito
-Xonha,88,Austrália
+benevides,73,Canadá
+diego campos,73,Canadá
+haron bonamigo,73,Canadá
+jv jec,73,África do Sul
+matheus honorato,73,Canadá
+meta ai,73,África do Sul
+haron bonamigo,74,Alemanha
+hotel plus antonio menezes,74,Alemanha
+matheus honorato,74,Alemanha
+arthur sk,75,Holanda
+emboava,75,Holanda
+gabs,75,Holanda
+gui,75,Holanda
+haron bonamigo,75,Holanda
+jose carlos,75,Marrocos
+lucas copini,75,Holanda
+marlon wietzikoski,75,Marrocos
+matheus honorato,75,Holanda
+ramos,75,Holanda
+rodri,75,Holanda
+rodrigo (ddd 95),75,Holanda
+haron bonamigo,76,Brasil
+matheus honorato,76,Brasil
+haron bonamigo,77,França
+hotel plus antonio menezes,77,França
+matheus honorato,77,França
+meta ai,77,França
+gabs,78,Noruega
+haron bonamigo,78,Noruega
+jv jec,78,Noruega
+matheus honorato,78,Costa do Marfim
+pylegend,78,Costa do Marfim
+xonha,78,Noruega
+andre galinha,79,México
+arthur sk,79,México
+ayrton,79,México
+diego campos,79,Equador
+emboava,79,México
+haron bonamigo,79,México
+hotel plus antonio menezes,79,México
+jose carlos,79,México
+lucas copini,79,México
+marlon wietzikoski,79,Equador
+matheus honorato,79,México
+meta ai,79,México
+pylegend,79,Equador
+rodrigo (ddd 95),79,Equador
+til ponto,79,México
+xonha,79,Equador
+haron bonamigo,80,Inglaterra
+matheus honorato,80,Inglaterra
+gabs,81,Estados Unidos
+haron bonamigo,81,Estados Unidos
+marlon wietzikoski,81,Estados Unidos
+matheus honorato,81,Estados Unidos
+rodri,81,Estados Unidos
+rodrigo (ddd 95),81,Estados Unidos
+alisson ottoni,82,Senegal
+arthur sk,82,Senegal
+gui,82,Senegal
+haron bonamigo,82,Bélgica
+matheus honorato,82,Senegal
+mazeta,82,Senegal
+meta ai,82,Bélgica
+rodrigo (ddd 95),82,Senegal
+til ponto,82,Senegal
+xonha,82,Bélgica
+alisson ottoni,83,Portugal
+ayrton,83,Portugal
+diego campos,83,Portugal
+gabs,83,Portugal
+haron bonamigo,83,Portugal
+hotel plus antonio menezes,83,Portugal
+jv jec,83,Portugal
+matheus honorato,83,Croácia
+meta ai,83,Croácia
+ramos,83,Portugal
+rodri,83,Portugal
+til ponto,83,Portugal
+haron bonamigo,84,Espanha
+marlon wietzikoski,84,Espanha
+matheus honorato,84,Espanha
+ramos,84,Áustria
+andre galinha,85,Argélia
+benevides,85,Argélia
+diego campos,85,Suíça
+emboava,85,Suíça
+haron bonamigo,85,Suíça
+jose carlos,85,Suíça
+lucas copini,85,Argélia
+marlon wietzikoski,85,Suíça
+matheus honorato,85,Argélia
+mazeta,85,Suíça
+rodri,85,Argélia
+til ponto,85,Suíça
+haron bonamigo,86,Argentina
+matheus honorato,86,Argentina
+ramos,86,Cabo Verde
+rodrigo (ddd 95),86,Cabo Verde
+haron bonamigo,87,Colômbia
+hotel plus antonio menezes,87,Colômbia
+jv jec,87,Gana
+matheus honorato,87,Colômbia
+rodrigo (ddd 95),87,Colômbia
+arthur sk,88,Egito
+benevides,88,Egito
+emboava,88,Austrália
+gabs,88,Egito
+haron bonamigo,88,Austrália
+matheus honorato,88,Egito
+mazeta,88,Austrália
+til ponto,88,Egito
+xonha,88,Austrália
+matheus honorato,89,França
+ramos,89,Paraguai
+Ramos,89,Paraguai
+alisson ottoni,90,Marrocos
+Alisson Ottoni,90,Marrocos
+haron bonamigo,90,Marrocos
+Haron Bonamigo,90,Marrocos
+lucas copini,90,Marrocos
+Lucas Copini,90,Marrocos
+marlon wietzikoski,90,Marrocos
+Marlon Wietzikoski,90,Marrocos
+matheus honorato,90,Canadá
+Matheus Honorato,90,Canadá
+ramos,90,Canadá
+Ramos,90,Canadá
+rodrigo (ddd 95),90,Marrocos
+Rodrigo (DDD 95),90,Marrocos
+diego campos,91,Brasil
+Diego Campos,91,Brasil
+matheus honorato,91,Brasil
+rodrigo (ddd 95),91,Brasil
+Rodrigo (DDD 95),91,Brasil
+ayrton,92,México
+Ayrton,92,México
+diego campos,92,Inglaterra
+Diego Campos,92,Inglaterra
+gui,92,México
+Gui,92,México
+hotel plus antonio menezes,92,México
+Hotel Plus Antonio Menezes,92,México
+jv jec,92,México
+JV JEC,92,México
+matheus honorato,92,Inglaterra
+xonha,92,Inglaterra
+Xonha,92,Inglaterra
+andre galinha,93,Portugal
+André Galinha,93,Portugal
+arthur sk,93,Espanha
+Arthur SK,93,Espanha
+ayrton,93,Portugal
+Ayrton,93,Portugal
+diego campos,93,Portugal
+Diego Campos,93,Portugal
+emboava,93,Portugal
+Emboava,93,Portugal
+gabs,93,Portugal
+Gabs,93,Portugal
+jose carlos,93,Portugal
+Jose Carlos,93,Portugal
+marlon wietzikoski,93,Espanha
+Marlon Wietzikoski,93,Espanha
+matheus honorato,93,Portugal
+Matheus Honorato,93,Portugal
+mazeta,93,Espanha
+Mazeta,93,Espanha
+meta ai,93,Portugal
+Meta AI,93,Portugal
+rodri,93,Portugal
+Rodri,93,Portugal
+rodrigo (ddd 95),93,Portugal
+Rodrigo (DDD 95),93,Portugal
+til ponto,93,Portugal
+Til ponto,93,Portugal
+xonha,93,Portugal
+andre galinha,94,Bélgica
+André Galinha,94,Bélgica
+arthur sk,94,Bélgica
+Arthur SK,94,Bélgica
+jose carlos,94,Bélgica
+Jose Carlos,94,Bélgica
+jv jec,94,Estados Unidos
+JV JEC,94,Estados Unidos
+matheus honorato,94,Estados Unidos
+pylegend,94,Estados Unidos
+Pylegend,94,Estados Unidos
+gui,95,Egito
+Gui,95,Egito
+marlon wietzikoski,95,Egito
+Marlon Wietzikoski,95,Egito
+matheus honorato,95,Argentina
+benevides,96,Colômbia
+Benevides,96,Colômbia
+gabs,96,Colômbia
+Gabs,96,Colômbia
+hotel plus antonio menezes,96,Colômbia
+Hotel Plus Antonio Menezes,96,Colômbia
+jose carlos,96,Colômbia
+Jose Carlos,96,Colômbia
+jv jec,96,Colômbia
+JV JEC,96,Colômbia
+lucas copini,96,Colômbia
+Lucas Copini,96,Colômbia
+matheus honorato,96,Suíça
+Matheus Honorato,96,Suíça
+meta ai,96,Colômbia
+Meta AI,96,Colômbia
+xonha,96,Colômbia
+Xonha,96,Colômbia

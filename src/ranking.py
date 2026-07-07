@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-SecaoClassificacaoReferencia = Literal["grupos", "grupos_32avos"]
+SecaoClassificacaoReferencia = Literal["grupos", "grupos_32avos", "grupos_32avos_oitavas"]
 
-JOGOS_BASELINE_REFERENCIA_GERAL = frozenset(range(1, 80))
 _MARCADOR_SECAO_GRUPOS_32_AVOS = "GRUPOS + 32 AVOS"
+_MARCADOR_SECAO_OITAVAS = "GRUPOS + 32 AVOS + OITAVAS"
 
 from src.cravadura import pontos_cravadura_por_participante
 from src.grupos_ranking import pontos_grupos_por_participante
@@ -16,6 +16,12 @@ from src.models import BolaoData, ClassificacaoLinha, ClassificacaoPremioLinha, 
 from src.scoring import FASE_GRUPOS_MAX, DECIMA_SEXTAS_MAX, pontos_detalhados
 from src.share_options import SecoesTextoCompartilhar
 from src.snapshot import formatar_posicao_com_mudanca, formatar_variacao
+
+JOGOS_BASELINE_GRUPOS = frozenset(range(1, FASE_GRUPOS_MAX + 1))
+JOGOS_BASELINE_GRUPOS_32AVOS = frozenset(range(1, DECIMA_SEXTAS_MAX + 1))
+JOGOS_BASELINE_OITAVAS = frozenset(range(1, 95))
+# Legado: preferir resolver_secao_e_baseline_referencia() conforme a secao importada.
+JOGOS_BASELINE_REFERENCIA_GERAL = JOGOS_BASELINE_GRUPOS_32AVOS
 
 
 def _chave_participante(participante: str) -> str:
@@ -449,15 +455,49 @@ def classificacao_ativa(
     return calculada
 
 
+def _ler_linhas_csv_referencia(path: Path) -> list[list[str]]:
+    conteudo = path.read_text(encoding="utf-8-sig")
+    delimitador = ";" if conteudo.count(";") > conteudo.count(",") else ","
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        return list(csv.reader(handle, delimiter=delimitador))
+
+
+def _linha_contem_marcador(row: list[str], marcador: str) -> bool:
+    return any(marcador in cell for cell in row)
+
+
+def referencia_tem_secao_oitavas(path: str | Path) -> bool:
+    path = Path(path)
+    if path.name == "classificacao_18avos.csv":
+        return True
+    if not path.exists():
+        return False
+    for row in _ler_linhas_csv_referencia(path):
+        if _linha_contem_marcador(row, _MARCADOR_SECAO_OITAVAS):
+            return True
+    return False
+
+
 def referencia_tem_secao_grupos_32avos(path: str | Path) -> bool:
     path = Path(path)
     if not path.exists():
         return False
-    with path.open(encoding="utf-8-sig", newline="") as handle:
-        for row in csv.reader(handle):
-            if any(_MARCADOR_SECAO_GRUPOS_32_AVOS in cell for cell in row):
-                return True
+    for row in _ler_linhas_csv_referencia(path):
+        if _linha_contem_marcador(row, _MARCADOR_SECAO_GRUPOS_32_AVOS):
+            return not _linha_contem_marcador(row, _MARCADOR_SECAO_OITAVAS)
     return False
+
+
+def resolver_secao_e_baseline_referencia(
+    path: str | Path | None,
+) -> tuple[SecaoClassificacaoReferencia, frozenset[int]]:
+    if path is None:
+        return "grupos", JOGOS_BASELINE_GRUPOS
+    if referencia_tem_secao_oitavas(path):
+        return "grupos_32avos_oitavas", JOGOS_BASELINE_OITAVAS
+    if referencia_tem_secao_grupos_32avos(path):
+        return "grupos_32avos", JOGOS_BASELINE_GRUPOS_32AVOS
+    return "grupos", JOGOS_BASELINE_GRUPOS
 
 
 def resolver_referencia_geral_csv(
@@ -465,11 +505,14 @@ def resolver_referencia_geral_csv(
     *,
     downloads: Path | None = None,
 ) -> Path | None:
-    """Preferencia: CLASSIFICACAO PROVISORIA (1).csv com secao grupos+32 avos."""
+    """Preferencia: classificacao_18avos.csv, depois planilhas do Excel."""
     from src.data_paths import candidatos_referencia_geral
 
     candidatos = candidatos_referencia_geral(data_dir, downloads=downloads)
 
+    for path in candidatos:
+        if path.exists() and referencia_tem_secao_oitavas(path):
+            return path
     for path in candidatos:
         if path.exists() and referencia_tem_secao_grupos_32avos(path):
             return path
@@ -486,20 +529,16 @@ def classificacao_geral_ativa(
     jogos_ids_baseline: set[int] | None = None,
     data_dir: str | Path | None = None,
 ) -> list[ClassificacaoLinha]:
-    """Tabela geral (grupos + 32 avos): referencia do Excel + jogos novos calculados."""
+    """Tabela geral: referencia importada + apenas jogos novos desde a baseline."""
     path = Path(importada_path) if importada_path else None
     if path is None or not path.exists():
         path = resolver_referencia_geral_csv(data_dir or Path("data"))
     if path is None or not path.exists():
         return gerar_classificacao_jogos(bolao)
 
-    secao: SecaoClassificacaoReferencia = (
-        "grupos_32avos" if referencia_tem_secao_grupos_32avos(path) else "grupos"
-    )
+    secao, baseline_padrao = resolver_secao_e_baseline_referencia(path)
     baseline = (
-        set(jogos_ids_baseline)
-        if jogos_ids_baseline is not None
-        else set(JOGOS_BASELINE_REFERENCIA_GERAL)
+        set(jogos_ids_baseline) if jogos_ids_baseline is not None else set(baseline_padrao)
     )
     return classificacao_ativa(
         bolao,
@@ -767,6 +806,9 @@ def sugerir_jogos_provisorios(
     ]
     if novos:
         return novos[-limite:]
+    pendentes = [jogo.id for jogo in bolao.jogos if not jogo.realizado]
+    if pendentes:
+        return pendentes[:limite]
     com_placar = [jogo.id for jogo in bolao.jogos if jogo.realizado]
     return com_placar[-limite:]
 
@@ -798,9 +840,19 @@ def _indice_cabecalho_secao(
     rows: list[list[str]],
     secao: SecaoClassificacaoReferencia,
 ) -> int:
+    if secao == "grupos_32avos_oitavas":
+        for indice, row in enumerate(rows):
+            if _linha_contem_marcador(row, _MARCADOR_SECAO_OITAVAS):
+                if indice + 1 < len(rows):
+                    return indice + 1
+                break
+        raise ValueError(f"Secao grupos+32 avos+oitavas nao encontrada em {secao!r}")
+
     if secao == "grupos_32avos":
         for indice, row in enumerate(rows):
-            if any(_MARCADOR_SECAO_GRUPOS_32_AVOS in cell for cell in row):
+            if _linha_contem_marcador(row, _MARCADOR_SECAO_GRUPOS_32_AVOS):
+                if _linha_contem_marcador(row, _MARCADOR_SECAO_OITAVAS):
+                    continue
                 if indice + 1 < len(rows):
                     return indice + 1
                 break
@@ -844,8 +896,7 @@ def carregar_classificacao_referencia(
     secao: SecaoClassificacaoReferencia = "grupos",
 ) -> list[ClassificacaoLinha]:
     path = Path(path)
-    with path.open(encoding="utf-8-sig", newline="") as handle:
-        rows = list(csv.reader(handle))
+    rows = _ler_linhas_csv_referencia(path)
 
     cabecalho_idx = _indice_cabecalho_secao(rows, secao)
     return _parse_linhas_classificacao(rows, cabecalho_idx)

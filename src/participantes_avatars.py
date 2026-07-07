@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import hashlib
-import unicodedata
 from pathlib import Path
 
+from src.bandeiras import _normalizar
 from src.data_paths import PARTICIPANTES_DIR, PARTICIPANTES_MANIFEST
 
 AVATAR_TAMANHO = 44
@@ -15,16 +15,23 @@ ALTURA_LINHA_AVATAR = 52
 EXTENSOES_FOTO = (".png", ".jpg", ".jpeg", ".webp")
 
 
+def _chave_nome_avatar(nome: str) -> str:
+    return _normalizar(nome).strip().lower()
+
+
 def carregar_mapa_arquivos(manifest: Path | None = None) -> dict[str, str]:
     caminho = manifest or PARTICIPANTES_MANIFEST
     if not caminho.is_file():
         return {}
     dados = json.loads(caminho.read_text(encoding="utf-8"))
-    return {
-        item["nome"].strip(): item["arquivo"].strip()
-        for item in dados.get("participantes", [])
-        if item.get("nome") and item.get("arquivo")
-    }
+    mapa: dict[str, str] = {}
+    for item in dados.get("participantes", []):
+        nome = (item.get("nome") or "").strip()
+        arquivo = (item.get("arquivo") or "").strip()
+        if not nome or not arquivo:
+            continue
+        mapa[_chave_nome_avatar(nome)] = arquivo
+    return mapa
 
 
 def iniciais_participante(nome: str) -> str:
@@ -51,7 +58,7 @@ def resolver_foto_participante(
     pasta: Path | None = None,
 ) -> Path | None:
     mapa = mapa if mapa is not None else carregar_mapa_arquivos()
-    arquivo = mapa.get(nome.strip())
+    arquivo = mapa.get(_chave_nome_avatar(nome))
     if not arquivo:
         return None
     base = pasta or PARTICIPANTES_DIR

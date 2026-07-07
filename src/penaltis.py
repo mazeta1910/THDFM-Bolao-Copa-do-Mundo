@@ -13,7 +13,10 @@ NOME_ALIASES = {
 
 
 def _chave_participante(nome: str) -> str:
-    return NOME_ALIASES.get(nome.strip().lower(), nome.strip())
+    from src.bandeiras import _normalizar
+
+    chave = _normalizar(nome).strip().lower()
+    return NOME_ALIASES.get(chave, chave)
 
 
 def nome_vencedor_jogo(jogo) -> str:

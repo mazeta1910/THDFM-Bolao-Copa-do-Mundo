@@ -36,6 +36,23 @@ class TestExportPalpitesAgrupado(unittest.TestCase):
             self.assertTrue(caminho.is_file())
             self.assertGreater(caminho.stat().st_size, 10_000)
 
+    def test_export_dois_jogos_lado_a_lado(self) -> None:
+        from PIL import Image
+
+        from src.image_export import _renderizar_tabela_palpites_png, exportar_palpites_png
+
+        bolao = carregar_bolao()
+        blocos = listar_palpites_jogos(bolao, [95, 96])
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "palpites.png"
+            exportar_palpites_png(blocos, caminho)
+            with Image.open(caminho) as imagem:
+                esquerda = _renderizar_tabela_palpites_png([blocos[0]])
+                direita = _renderizar_tabela_palpites_png([blocos[1]])
+                self.assertGreater(imagem.width, esquerda.width)
+                self.assertGreater(imagem.width, direita.width)
+                self.assertGreaterEqual(imagem.height, max(esquerda.height, direita.height))
+
 
 if __name__ == "__main__":
     unittest.main()

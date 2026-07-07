@@ -25,6 +25,8 @@ ARQUIVOS_FONTES = (
     "BOLÃO THDFM WC26 - CRAVADURA.csv",
     "BOLÃO THDFM WC26 - RESPOSTAS PRIMEIRA FASE E CRAVADURA.csv",
     "BOLÃO THDFM WC26 - RESPOSTAS 32 AVOS.csv",
+    "BOLÃO THDFM WC26 - RESPOSTAS OITAVAS.csv",
+    "BOLÃO THDFM WC26 - Oitavas.csv",
     "Planilha Classificações Reais.csv",
     "Planilha Classificações Reais.xlsx",
     "palpites_penaltis.csv",
@@ -161,11 +163,17 @@ def candidatos_referencia_geral(
 ) -> list[Path]:
     raiz = data_dir or DATA_DIR
     nomes = (
+        "classificacao_18avos.csv",
         "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv",
         "classificacao_referencia.csv",
         "BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA.csv",
     )
-    candidatos = [resolver_arquivo_fonte(nome, data_dir=raiz) for nome in nomes]
+    candidatos: list[Path] = []
+    for nome in nomes:
+        if nome == "classificacao_18avos.csv":
+            candidatos.append(resolver_arquivo_base(nome, data_dir=raiz))
+        else:
+            candidatos.append(resolver_arquivo_fonte(nome, data_dir=raiz))
     if downloads is not None:
         candidatos.extend(
             [
@@ -180,6 +188,7 @@ def candidatos_referencia_geral(
 BOLAO_CSV = caminho_base("bolao.csv")
 RESULTADOS_CSV = caminho_base("resultados.csv")
 SNAPSHOT_JSON = caminho_base("classificacao_snapshot.json")
+CLASSIFICACAO_18AVOS_CSV = caminho_base("classificacao_18avos.csv")
 REFERENCIA_CSV = caminho_fonte("classificacao_referencia.csv")
 REFERENCIA_GERAL_CSV = caminho_fonte("BOLÃO THDFM WC26 - CLASSIFICAÇÃO PROVISÓRIA (1).csv")
 CRAVADURA_CSV = caminho_fonte("BOLÃO THDFM WC26 - CRAVADURA.csv")
@@ -188,4 +197,6 @@ PALPITES_PRIMEIRA_FASE_CSV = caminho_fonte(
     "BOLÃO THDFM WC26 - RESPOSTAS PRIMEIRA FASE E CRAVADURA.csv"
 )
 RESPOSTAS_32_AVOS_CSV = caminho_fonte("BOLÃO THDFM WC26 - RESPOSTAS 32 AVOS.csv")
+RESPOSTAS_OITAVAS_CSV = caminho_fonte("BOLÃO THDFM WC26 - RESPOSTAS OITAVAS.csv")
+PLANILHA_OITAVAS_CSV = caminho_fonte("BOLÃO THDFM WC26 - Oitavas.csv")
 PALPITES_PENALTIS_CSV = caminho_fonte("palpites_penaltis.csv")

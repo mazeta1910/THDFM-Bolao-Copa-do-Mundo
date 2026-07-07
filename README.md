@@ -294,6 +294,8 @@ python -m src.cli conferir
 
 # Importar palpites dos 32 avos (RESPOSTAS → bolao.csv)
 python scripts/import_32avos.py --atualizar
+python scripts/import_oitavas.py
+python scripts/import_oitavas.py --atualizar
 
 # Importar placares das linhas PLACAR do bolao.csv
 python -m src.cli importar-resultados
@@ -371,7 +373,7 @@ Cobrem pontuação, ranking, parser da planilha THDFM, snapshot e export de imag
 THDFM-Bolao-Copa-do-Mundo/
 ├── data/                  # CSVs operacionais + flags/
 │   └── ultimo/            # Exports gerados (gitignored; veja manifest.txt)
-├── scripts/               # setup_data, download_bandeiras, import_32avos
+├── scripts/               # setup_data, download_bandeiras, import_32avos, import_oitavas
 ├── src/
 │   ├── cli.py             # Comandos e menu
 │   ├── menu.py            # Menu interativo
