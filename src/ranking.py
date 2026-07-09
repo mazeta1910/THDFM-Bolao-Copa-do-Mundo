@@ -19,7 +19,7 @@ from src.snapshot import formatar_posicao_com_mudanca, formatar_variacao
 
 JOGOS_BASELINE_GRUPOS = frozenset(range(1, FASE_GRUPOS_MAX + 1))
 JOGOS_BASELINE_GRUPOS_32AVOS = frozenset(range(1, DECIMA_SEXTAS_MAX + 1))
-JOGOS_BASELINE_OITAVAS = frozenset(range(1, 95))
+JOGOS_BASELINE_OITAVAS = frozenset(range(1, 97))
 # Legado: preferir resolver_secao_e_baseline_referencia() conforme a secao importada.
 JOGOS_BASELINE_REFERENCIA_GERAL = JOGOS_BASELINE_GRUPOS_32AVOS
 
@@ -54,6 +54,7 @@ JOGOS_QUARTAS = frozenset(range(97, 100 + 1))
 JOGOS_SEMIS = frozenset(range(101, 102 + 1))
 JOGOS_FINAIS = frozenset(range(103, 104 + 1))
 JOGOS_GRUPOS_MAIS_32_AVOS = JOGOS_FASE_GRUPOS | JOGOS_32_AVOS
+JOGOS_ATE_OITAVAS = JOGOS_FASE_GRUPOS | JOGOS_32_AVOS | JOGOS_OITAVAS
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,12 @@ FASES_BOLAO: dict[str, FaseBolao] = {
         "PONTUACAO PARCIAL - FASE DE GRUPOS + 32 AVOS",
         JOGOS_GRUPOS_MAIS_32_AVOS,
         73,
+    ),
+    "ate_oitavas": FaseBolao(
+        "ate_oitavas",
+        "CLASSIFICACAO ACUMULADA - GRUPOS + 32 AVOS + OITAVAS (J1-J96)",
+        JOGOS_ATE_OITAVAS,
+        1,
     ),
 }
 
@@ -130,10 +137,12 @@ def legenda_pesos_geral_linhas() -> list[tuple[str, str]]:
     g = pesos_para_jogo(1)
     a = pesos_para_jogo(73)
     o = pesos_para_jogo(89)
+    q = pesos_para_jogo(97)
     return [
         ("PONTUAÇÕES GRUPOS (J1-J72):", _detalhe_pesos(g)),
         ("PONTUAÇÕES 32 AVOS (J73-J88):", _detalhe_pesos(a)),
-        ("PONTUAÇÕES OITAVAS+ (J89+):", _detalhe_pesos(o)),
+        ("PONTUAÇÕES OITAVAS (J89-J96):", _detalhe_pesos(o)),
+        ("PONTUAÇÕES QUARTAS+ (J97+):", _detalhe_pesos(q)),
     ]
 
 
@@ -146,6 +155,15 @@ def legenda_pesos_fase_linhas(fase_id: str) -> list[tuple[str, str]]:
         return [
             ("PONTUAÇÕES GRUPOS (J1-J72):", _detalhe_pesos(g)),
             ("PONTUAÇÕES 32 AVOS (J73-J88):", _detalhe_pesos(a)),
+        ]
+    if fase_id == "ate_oitavas":
+        g = pesos_para_jogo(1)
+        a = pesos_para_jogo(73)
+        o = pesos_para_jogo(89)
+        return [
+            ("PONTUAÇÕES GRUPOS (J1-J72):", _detalhe_pesos(g)),
+            ("PONTUAÇÕES 32 AVOS (J73-J88):", _detalhe_pesos(a)),
+            ("PONTUAÇÕES OITAVAS (J89-J96):", _detalhe_pesos(o)),
         ]
     fase = FASES_BOLAO[fase_id]
     pesos = pesos_para_jogo(fase.jogo_pesos)
@@ -317,6 +335,10 @@ def gerar_classificacao_32avos(bolao: BolaoData) -> list[ClassificacaoLinha]:
 
 def gerar_classificacao_grupos_mais_32avos(bolao: BolaoData) -> list[ClassificacaoLinha]:
     return gerar_classificacao_jogos_faixa(bolao, set(JOGOS_GRUPOS_MAIS_32_AVOS))
+
+
+def gerar_classificacao_ate_oitavas(bolao: BolaoData) -> list[ClassificacaoLinha]:
+    return gerar_classificacao_jogos_faixa(bolao, set(JOGOS_ATE_OITAVAS))
 
 
 def gerar_classificacao(

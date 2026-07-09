@@ -1230,7 +1230,7 @@ def main(argv: list[str] | None = None) -> int:
         "--fase",
         required=True,
         choices=sorted(FASES_BOLAO),
-        help="grupos, 32avos, oitavas, quartas, semis ou finais",
+        help="grupos, 32avos, ate_oitavas, oitavas, quartas, semis ou finais",
     )
     p_fase.add_argument("--sem-arquivo", action="store_true")
     p_fase.add_argument("--sem-png", action="store_true")

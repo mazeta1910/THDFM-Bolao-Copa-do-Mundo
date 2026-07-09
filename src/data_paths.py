@@ -10,6 +10,7 @@ DATA_DIR = BASE_DIR / "data"
 BASE_DATA_DIR = DATA_DIR / "base"
 FONTES_DATA_DIR = DATA_DIR / "fontes"
 PARTICIPANTES_DIR = DATA_DIR / "participantes"
+PALPITES_PARTICIPANTES_DIR = DATA_DIR / "palpites participantes"
 PARTICIPANTES_MANIFEST = PARTICIPANTES_DIR / "manifest.json"
 
 ARQUIVOS_BASE = (
@@ -27,6 +28,7 @@ ARQUIVOS_FONTES = (
     "BOLÃO THDFM WC26 - RESPOSTAS 32 AVOS.csv",
     "BOLÃO THDFM WC26 - RESPOSTAS OITAVAS.csv",
     "BOLÃO THDFM WC26 - Oitavas.csv",
+    "BOLÃO THDFM WC26 - Quartas.csv",
     "Planilha Classificações Reais.csv",
     "Planilha Classificações Reais.xlsx",
     "palpites_penaltis.csv",
@@ -81,6 +83,7 @@ def ensure_data_layout(data_dir: Path | None = None) -> list[str]:
     (raiz / "base").mkdir(parents=True, exist_ok=True)
     (raiz / "fontes").mkdir(parents=True, exist_ok=True)
     (raiz / "participantes").mkdir(parents=True, exist_ok=True)
+    (raiz / "palpites participantes").mkdir(parents=True, exist_ok=True)
     return migrar_estrutura_data(raiz)
 
 
@@ -199,4 +202,5 @@ PALPITES_PRIMEIRA_FASE_CSV = caminho_fonte(
 RESPOSTAS_32_AVOS_CSV = caminho_fonte("BOLÃO THDFM WC26 - RESPOSTAS 32 AVOS.csv")
 RESPOSTAS_OITAVAS_CSV = caminho_fonte("BOLÃO THDFM WC26 - RESPOSTAS OITAVAS.csv")
 PLANILHA_OITAVAS_CSV = caminho_fonte("BOLÃO THDFM WC26 - Oitavas.csv")
+PLANILHA_QUARTAS_CSV = caminho_fonte("BOLÃO THDFM WC26 - Quartas.csv")
 PALPITES_PENALTIS_CSV = caminho_fonte("palpites_penaltis.csv")
