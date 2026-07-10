@@ -1,5 +1,5 @@
 {
-  "jogos_realizados": 96,
+  "jogos_realizados": 98,
   "jogos_ids": [
     1,
     2,
@@ -96,65 +96,121 @@
     93,
     94,
     95,
-    96
+    96,
+    97,
+    98
   ],
   "participantes": {
-    "Diego Campos": {
-      "posicao": 1,
-      "soma": 480,
-      "placar": 82,
-      "vencedor": 266,
-      "gols_casa": 72,
-      "gols_fora": 60,
-      "grupos": 0
-    },
-    "Xonha": {
-      "posicao": 2,
-      "soma": 474,
-      "placar": 128,
-      "vencedor": 254,
-      "gols_casa": 43,
-      "gols_fora": 49,
-      "grupos": 0
-    },
-    "Arthur SK": {
-      "posicao": 3,
-      "soma": 474,
-      "placar": 58,
-      "vencedor": 271,
-      "gols_casa": 103,
-      "gols_fora": 42,
-      "grupos": 0
-    },
     "Haron Bonamigo": {
-      "posicao": 4,
-      "soma": 470,
-      "placar": 120,
-      "vencedor": 275,
+      "posicao": 1,
+      "soma": 535,
+      "placar": 160,
+      "vencedor": 300,
       "gols_casa": 39,
       "gols_fora": 36,
       "grupos": 0
     },
+    "Diego Campos": {
+      "posicao": 2,
+      "soma": 525,
+      "placar": 82,
+      "vencedor": 291,
+      "gols_casa": 92,
+      "gols_fora": 60,
+      "grupos": 0
+    },
     "Juan": {
-      "posicao": 5,
-      "soma": 458,
-      "placar": 85,
-      "vencedor": 274,
+      "posicao": 3,
+      "soma": 523,
+      "placar": 125,
+      "vencedor": 299,
       "gols_casa": 68,
       "gols_fora": 31,
       "grupos": 0
     },
+    "Arthur SK": {
+      "posicao": 4,
+      "soma": 519,
+      "placar": 58,
+      "vencedor": 296,
+      "gols_casa": 103,
+      "gols_fora": 62,
+      "grupos": 0
+    },
+    "Benevides": {
+      "posicao": 5,
+      "soma": 501,
+      "placar": 85,
+      "vencedor": 319,
+      "gols_casa": 57,
+      "gols_fora": 40,
+      "grupos": 0
+    },
     "Meta AI": {
       "posicao": 6,
-      "soma": 455,
+      "soma": 500,
       "placar": 43,
-      "vencedor": 278,
-      "gols_casa": 75,
+      "vencedor": 303,
+      "gols_casa": 95,
       "gols_fora": 59,
       "grupos": 0
     },
-    "Rodrigo (DDD 95)": {
+    "Xonha": {
       "posicao": 7,
+      "soma": 499,
+      "placar": 128,
+      "vencedor": 279,
+      "gols_casa": 43,
+      "gols_fora": 49,
+      "grupos": 0
+    },
+    "Rodri": {
+      "posicao": 8,
+      "soma": 498,
+      "placar": 125,
+      "vencedor": 257,
+      "gols_casa": 66,
+      "gols_fora": 50,
+      "grupos": 0
+    },
+    "André Galinha": {
+      "posicao": 9,
+      "soma": 491,
+      "placar": 97,
+      "vencedor": 297,
+      "gols_casa": 41,
+      "gols_fora": 56,
+      "grupos": 0
+    },
+    "Alisson Ottoni": {
+      "posicao": 10,
+      "soma": 484,
+      "placar": 50,
+      "vencedor": 289,
+      "gols_casa": 95,
+      "gols_fora": 50,
+      "grupos": 0
+    },
+    "Til ponto": {
+      "posicao": 11,
+      "soma": 480,
+      "placar": 122,
+      "vencedor": 264,
+      "gols_casa": 53,
+      "gols_fora": 41,
+      "grupos": 0
+    },
+    "Jose Carlos": {
+      "posicao": 12,
+      "soma": 476,
+      "placar": 42,
+      "vencedor": 318,
+      "gols_casa": 87,
+      "gols_fora": 29,
+      "grupos": 0
+    },
+    "Rodrigo (DDD 95)": {
+      "posicao": 13,
       "soma": 451,
       "placar": 68,
       "vencedor": 252,
@@ -162,62 +218,53 @@
       "gols_fora": 49,
       "grupos": 0
     },
-    "Jose Carlos": {
-      "posicao": 8,
-      "soma": 451,
-      "placar": 42,
-      "vencedor": 293,
-      "gols_casa": 87,
-      "gols_fora": 29,
-      "grupos": 0
-    },
-    "Alisson Ottoni": {
-      "posicao": 9,
-      "soma": 439,
-      "placar": 50,
-      "vencedor": 264,
-      "gols_casa": 75,
-      "gols_fora": 50,
-      "grupos": 0
-    },
-    "Benevides": {
-      "posicao": 10,
-      "soma": 436,
-      "placar": 45,
-      "vencedor": 294,
-      "gols_casa": 57,
-      "gols_fora": 40,
-      "grupos": 0
-    },
-    "Rodri": {
-      "posicao": 11,
-      "soma": 433,
-      "placar": 85,
-      "vencedor": 232,
-      "gols_casa": 66,
-      "gols_fora": 50,
-      "grupos": 0
-    },
-    "André Galinha": {
-      "posicao": 12,
-      "soma": 426,
-      "placar": 57,
-      "vencedor": 272,
-      "gols_casa": 41,
-      "gols_fora": 56,
-      "grupos": 0
-    },
     "JV JEC": {
-      "posicao": 13,
-      "soma": 421,
+      "posicao": 14,
+      "soma": 446,
       "placar": 60,
-      "vencedor": 227,
+      "vencedor": 252,
       "gols_casa": 97,
       "gols_fora": 37,
       "grupos": 0
     },
+    "Ayrton": {
+      "posicao": 15,
+      "soma": 443,
+      "placar": 52,
+      "vencedor": 272,
+      "gols_casa": 59,
+      "gols_fora": 60,
+      "grupos": 0
+    },
+    "Mazeta": {
+      "posicao": 16,
+      "soma": 443,
+      "placar": 51,
+      "vencedor": 273,
+      "gols_casa": 78,
+      "gols_fora": 41,
+      "grupos": 0
+    },
+    "Emboava": {
+      "posicao": 17,
+      "soma": 439,
+      "placar": 35,
+      "vencedor": 276,
+      "gols_casa": 80,
+      "gols_fora": 48,
+      "grupos": 0
+    },
+    "Gabs": {
+      "posicao": 18,
+      "soma": 433,
+      "placar": 25,
+      "vencedor": 255,
+      "gols_casa": 109,
+      "gols_fora": 44,
+      "grupos": 0
+    },
     "Pylegend": {
-      "posicao": 14,
+      "posicao": 19,
       "soma": 420,
       "placar": 58,
       "vencedor": 266,
@@ -225,58 +272,13 @@
       "gols_fora": 40,
       "grupos": 0
     },
-    "Mazeta": {
-      "posicao": 15,
-      "soma": 418,
-      "placar": 51,
-      "vencedor": 248,
-      "gols_casa": 78,
-      "gols_fora": 41,
-      "grupos": 0
-    },
-    "Til ponto": {
-      "posicao": 16,
-      "soma": 415,
-      "placar": 82,
-      "vencedor": 239,
-      "gols_casa": 53,
-      "gols_fora": 41,
-      "grupos": 0
-    },
-    "Gabs": {
-      "posicao": 17,
-      "soma": 413,
-      "placar": 25,
-      "vencedor": 255,
-      "gols_casa": 89,
-      "gols_fora": 44,
-      "grupos": 0
-    },
     "Gui": {
-      "posicao": 18,
+      "posicao": 20,
       "soma": 411,
       "placar": 71,
       "vencedor": 222,
       "gols_casa": 58,
       "gols_fora": 60,
-      "grupos": 0
-    },
-    "Ayrton": {
-      "posicao": 19,
-      "soma": 398,
-      "placar": 52,
-      "vencedor": 247,
-      "gols_casa": 39,
-      "gols_fora": 60,
-      "grupos": 0
-    },
-    "Emboava": {
-      "posicao": 20,
-      "soma": 394,
-      "placar": 35,
-      "vencedor": 251,
-      "gols_casa": 60,
-      "gols_fora": 48,
       "grupos": 0
     },
     "Lucas Copini": {
