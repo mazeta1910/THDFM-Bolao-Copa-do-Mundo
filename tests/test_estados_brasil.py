@@ -12,8 +12,10 @@ from src.flag_cache import baixar_bandeira, codigos_bandeira_necessarios
 
 class TestLoteInicialEstados(unittest.TestCase):
     def test_nomes_canonicos_parana_e_rs(self):
-        self.assertEqual(times_estados(), ["Time do Paraná", "Time do RS"])
-        self.assertEqual(ufs_registradas(), {"PR", "RS"})
+        nomes = times_estados()
+        self.assertIn("Time do Paraná", nomes)
+        self.assertIn("Time do RS", nomes)
+        self.assertTrue({"PR", "RS"}.issubset(ufs_registradas()))
 
     def test_iso_e_sigla_time_do_parana(self):
         self.assertEqual(iso_time("Time do Paraná"), "BR-PR")
@@ -50,7 +52,50 @@ class TestLoteInicialEstados(unittest.TestCase):
         # Panama/Espanha seguem com ISO de pais; estados usam prefixo BR-.
         self.assertEqual(iso_time("Panamá"), "PA")
         self.assertEqual(iso_time("Espanha"), "ES")
+        self.assertEqual(iso_time("Time do ES"), "BR-ES")
         self.assertTrue(iso_time("Time do Paraná").startswith("BR-"))
+
+
+class TestLoteSudesteSulDF(unittest.TestCase):
+    def test_nomes_canonicos_lote2(self):
+        self.assertEqual(
+            {
+                "Time de SP",
+                "Time do RJ",
+                "Time de MG",
+                "Time de SC",
+                "Time do ES",
+                "Time do DF",
+            },
+            set(times_estados())
+            & {
+                "Time de SP",
+                "Time do RJ",
+                "Time de MG",
+                "Time de SC",
+                "Time do ES",
+                "Time do DF",
+            },
+        )
+
+    def test_aliases_e_codigos_lote2(self):
+        casos = [
+            ("Time de SP", "BR-SP", "SP"),
+            ("São Paulo", "BR-SP", "SP"),
+            ("Time do RJ", "BR-RJ", "RJ"),
+            ("Rio de Janeiro", "BR-RJ", "RJ"),
+            ("Time de MG", "BR-MG", "MG"),
+            ("Minas Gerais", "BR-MG", "MG"),
+            ("Time de SC", "BR-SC", "SC"),
+            ("Time do ES", "BR-ES", "ES"),
+            ("Espírito Santo", "BR-ES", "ES"),
+            ("Time do DF", "BR-DF", "DF"),
+            ("Distrito Federal", "BR-DF", "DF"),
+        ]
+        for nome, codigo, uf in casos:
+            with self.subTest(nome=nome):
+                self.assertEqual(iso_time(nome), codigo)
+                self.assertEqual(sigla_time(nome), uf)
 
 
 if __name__ == "__main__":

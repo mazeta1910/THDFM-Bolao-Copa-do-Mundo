@@ -29,10 +29,18 @@ class EstadoBrasil:
         return f"Time {self.artigo} {rotulo}"
 
 
-# Lote inicial da atualizacao do grid (expandido aos poucos).
+# Atualizacao do grid — preenchido por lotes ate cobrir as 27 UFs.
 ESTADOS_BRASIL: tuple[EstadoBrasil, ...] = (
+    # Lote 1
     EstadoBrasil("PR", "Paraná", "do", False),
     EstadoBrasil("RS", "Rio Grande do Sul", "do", True),
+    # Lote 2 — Sudeste / Sul / DF
+    EstadoBrasil("SP", "São Paulo", "de", True),
+    EstadoBrasil("RJ", "Rio de Janeiro", "do", True),
+    EstadoBrasil("MG", "Minas Gerais", "de", True),
+    EstadoBrasil("SC", "Santa Catarina", "de", True),
+    EstadoBrasil("ES", "Espírito Santo", "do", True),
+    EstadoBrasil("DF", "Distrito Federal", "do", True),
 )
 
 
