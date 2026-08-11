@@ -138,5 +138,72 @@ class TestLoteNordeste(unittest.TestCase):
         self.assertEqual(iso_time("Time da Bahia"), "BR-BA")
 
 
+class TestLoteNorteCentroOeste(unittest.TestCase):
+    def test_nomes_canonicos_norte_centro_oeste(self):
+        esperados = {
+            "Time do Acre",
+            "Time do Amapá",
+            "Time do Amazonas",
+            "Time do Pará",
+            "Time de Rondônia",
+            "Time de Roraima",
+            "Time do Tocantins",
+            "Time de Goiás",
+            "Time do MT",
+            "Time do MS",
+        }
+        self.assertTrue(esperados.issubset(set(times_estados())))
+
+    def test_aliases_e_codigos_norte_centro_oeste(self):
+        casos = [
+            ("Time do Acre", "BR-AC", "AC"),
+            ("Acre", "BR-AC", "AC"),
+            ("Time do Amapá", "BR-AP", "AP"),
+            ("Time do Amazonas", "BR-AM", "AM"),
+            ("Time do Pará", "BR-PA", "PA"),
+            ("Pará", "BR-PA", "PA"),
+            ("Time de Rondônia", "BR-RO", "RO"),
+            ("Time de Roraima", "BR-RR", "RR"),
+            ("Time do Tocantins", "BR-TO", "TO"),
+            ("Time de Goiás", "BR-GO", "GO"),
+            ("Goiás", "BR-GO", "GO"),
+            ("Time do MT", "BR-MT", "MT"),
+            ("Mato Grosso", "BR-MT", "MT"),
+            ("Time do MS", "BR-MS", "MS"),
+            ("Mato Grosso do Sul", "BR-MS", "MS"),
+        ]
+        for nome, codigo, uf in casos:
+            with self.subTest(nome=nome):
+                self.assertEqual(iso_time(nome), codigo)
+                self.assertEqual(sigla_time(nome), uf)
+
+    def test_para_nao_sobrescreve_panama(self):
+        self.assertEqual(iso_time("Panamá"), "PA")
+        self.assertEqual(iso_time("Time do Pará"), "BR-PA")
+
+
+class TestGridCompletoEstados(unittest.TestCase):
+    def test_todas_as_27_ufs(self):
+        ufs = ufs_registradas()
+        self.assertEqual(len(ufs), 27)
+        self.assertEqual(len(times_estados()), 27)
+        self.assertEqual(
+            ufs,
+            {
+                "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+                "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+                "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+            },
+        )
+
+    def test_todos_codigos_com_prefixo_br(self):
+        for nome in times_estados():
+            with self.subTest(nome=nome):
+                codigo = iso_time(nome)
+                self.assertIsNotNone(codigo)
+                self.assertTrue(codigo.startswith("BR-"))
+                self.assertEqual(len(codigo), 5)
+
+
 if __name__ == "__main__":
     unittest.main()

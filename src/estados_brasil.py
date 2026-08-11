@@ -29,28 +29,40 @@ class EstadoBrasil:
         return f"Time {self.artigo} {rotulo}"
 
 
-# Atualizacao do grid — preenchido por lotes ate cobrir as 27 UFs.
+# Grid completo: 26 estados + DF (ordem por regiao).
 ESTADOS_BRASIL: tuple[EstadoBrasil, ...] = (
-    # Lote 1
-    EstadoBrasil("PR", "Paraná", "do", False),
-    EstadoBrasil("RS", "Rio Grande do Sul", "do", True),
-    # Lote 2 — Sudeste / Sul / DF
-    EstadoBrasil("SP", "São Paulo", "de", True),
-    EstadoBrasil("RJ", "Rio de Janeiro", "do", True),
-    EstadoBrasil("MG", "Minas Gerais", "de", True),
-    EstadoBrasil("SC", "Santa Catarina", "de", True),
-    EstadoBrasil("ES", "Espírito Santo", "do", True),
-    EstadoBrasil("DF", "Distrito Federal", "do", True),
-    # Lote 3 — Nordeste
+    # Norte
+    EstadoBrasil("AC", "Acre", "do", False),
+    EstadoBrasil("AP", "Amapá", "do", False),
+    EstadoBrasil("AM", "Amazonas", "do", False),
+    EstadoBrasil("PA", "Pará", "do", False),
+    EstadoBrasil("RO", "Rondônia", "de", False),
+    EstadoBrasil("RR", "Roraima", "de", False),
+    EstadoBrasil("TO", "Tocantins", "do", False),
+    # Nordeste
+    EstadoBrasil("AL", "Alagoas", "de", False),
     EstadoBrasil("BA", "Bahia", "da", False),
-    EstadoBrasil("PE", "Pernambuco", "de", False),
     EstadoBrasil("CE", "Ceará", "do", False),
     EstadoBrasil("MA", "Maranhão", "do", False),
     EstadoBrasil("PB", "Paraíba", "da", False),
-    EstadoBrasil("AL", "Alagoas", "de", False),
-    EstadoBrasil("SE", "Sergipe", "de", False),
-    EstadoBrasil("RN", "Rio Grande do Norte", "do", True),
+    EstadoBrasil("PE", "Pernambuco", "de", False),
     EstadoBrasil("PI", "Piauí", "do", False),
+    EstadoBrasil("RN", "Rio Grande do Norte", "do", True),
+    EstadoBrasil("SE", "Sergipe", "de", False),
+    # Centro-Oeste
+    EstadoBrasil("DF", "Distrito Federal", "do", True),
+    EstadoBrasil("GO", "Goiás", "de", False),
+    EstadoBrasil("MT", "Mato Grosso", "do", True),
+    EstadoBrasil("MS", "Mato Grosso do Sul", "do", True),
+    # Sudeste
+    EstadoBrasil("ES", "Espírito Santo", "do", True),
+    EstadoBrasil("MG", "Minas Gerais", "de", True),
+    EstadoBrasil("RJ", "Rio de Janeiro", "do", True),
+    EstadoBrasil("SP", "São Paulo", "de", True),
+    # Sul
+    EstadoBrasil("PR", "Paraná", "do", False),
+    EstadoBrasil("RS", "Rio Grande do Sul", "do", True),
+    EstadoBrasil("SC", "Santa Catarina", "de", True),
 )
 
 
