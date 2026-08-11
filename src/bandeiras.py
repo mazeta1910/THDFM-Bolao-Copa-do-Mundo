@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unicodedata
 
+from src.estados_brasil import aliases_times_estados, mapa_times_estados_iso, uf_do_codigo
+
 
 def _normalizar(nome: str) -> str:
     texto = unicodedata.normalize("NFD", nome.strip())
@@ -71,12 +73,22 @@ ALIASES_TIMES: dict[str, str] = {
 }
 
 
+def _aliases_completos() -> dict[str, str]:
+    aliases = dict(ALIASES_TIMES)
+    aliases.update(aliases_times_estados())
+    return aliases
+
+
 def _chave_time(nome: str) -> str:
     chave = _normalizar(nome)
-    return ALIASES_TIMES.get(chave, chave)
+    return _aliases_completos().get(chave, chave)
 
 
 def bandeira_iso(codigo: str) -> str:
+    uf = uf_do_codigo(codigo)
+    if uf:
+        # Estados usam a bandeira do Brasil no texto; PNG e gerado localmente.
+        return bandeira_iso("BR")
     return "".join(chr(127397 + ord(letra)) for letra in codigo.upper())
 
 
@@ -84,14 +96,20 @@ def iso_time(nome: str) -> str | None:
     chave = _chave_time(nome)
     if chave in BANDEIRAS_ESPECIAIS:
         return "SCO"
+    codigo_estado = mapa_times_estados_iso().get(chave)
+    if codigo_estado:
+        return codigo_estado
     return TIMES_ISO.get(chave)
 
 
 def sigla_time(nome: str) -> str:
     codigo = iso_time(nome)
-    if codigo:
-        return codigo.upper()
-    return nome[:3].upper()
+    if not codigo:
+        return nome[:3].upper()
+    uf = uf_do_codigo(codigo)
+    if uf:
+        return uf
+    return codigo.upper()
 
 
 def confronto_siglas_placar(
@@ -107,7 +125,7 @@ def bandeira_time(nome: str) -> str:
     chave = _chave_time(nome)
     if chave in BANDEIRAS_ESPECIAIS:
         return BANDEIRAS_ESPECIAIS[chave]
-    codigo = TIMES_ISO.get(chave)
+    codigo = iso_time(nome)
     if codigo:
         return bandeira_iso(codigo)
     return "🏳️"
