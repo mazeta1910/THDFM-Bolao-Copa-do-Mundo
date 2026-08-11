@@ -98,5 +98,45 @@ class TestLoteSudesteSulDF(unittest.TestCase):
                 self.assertEqual(sigla_time(nome), uf)
 
 
+class TestLoteNordeste(unittest.TestCase):
+    def test_nomes_canonicos_nordeste(self):
+        esperados = {
+            "Time da Bahia",
+            "Time de Pernambuco",
+            "Time do Ceará",
+            "Time do Maranhão",
+            "Time da Paraíba",
+            "Time de Alagoas",
+            "Time de Sergipe",
+            "Time do RN",
+            "Time do Piauí",
+        }
+        self.assertTrue(esperados.issubset(set(times_estados())))
+
+    def test_aliases_e_codigos_nordeste(self):
+        casos = [
+            ("Time da Bahia", "BR-BA", "BA"),
+            ("Bahia", "BR-BA", "BA"),
+            ("Time de Pernambuco", "BR-PE", "PE"),
+            ("Time do Ceará", "BR-CE", "CE"),
+            ("Ceará", "BR-CE", "CE"),
+            ("Time do Maranhão", "BR-MA", "MA"),
+            ("Time da Paraíba", "BR-PB", "PB"),
+            ("Time de Alagoas", "BR-AL", "AL"),
+            ("Time de Sergipe", "BR-SE", "SE"),
+            ("Time do RN", "BR-RN", "RN"),
+            ("Rio Grande do Norte", "BR-RN", "RN"),
+            ("Time do Piauí", "BR-PI", "PI"),
+        ]
+        for nome, codigo, uf in casos:
+            with self.subTest(nome=nome):
+                self.assertEqual(iso_time(nome), codigo)
+                self.assertEqual(sigla_time(nome), uf)
+
+    def test_bahia_nao_sobrescreve_bosnia(self):
+        self.assertEqual(iso_time("Bósnia e Herzegovina"), "BA")
+        self.assertEqual(iso_time("Time da Bahia"), "BR-BA")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -41,6 +41,16 @@ ESTADOS_BRASIL: tuple[EstadoBrasil, ...] = (
     EstadoBrasil("SC", "Santa Catarina", "de", True),
     EstadoBrasil("ES", "Espírito Santo", "do", True),
     EstadoBrasil("DF", "Distrito Federal", "do", True),
+    # Lote 3 — Nordeste
+    EstadoBrasil("BA", "Bahia", "da", False),
+    EstadoBrasil("PE", "Pernambuco", "de", False),
+    EstadoBrasil("CE", "Ceará", "do", False),
+    EstadoBrasil("MA", "Maranhão", "do", False),
+    EstadoBrasil("PB", "Paraíba", "da", False),
+    EstadoBrasil("AL", "Alagoas", "de", False),
+    EstadoBrasil("SE", "Sergipe", "de", False),
+    EstadoBrasil("RN", "Rio Grande do Norte", "do", True),
+    EstadoBrasil("PI", "Piauí", "do", False),
 )
 
 
