@@ -2,44 +2,57 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.gerar_grids_estados import (
+from scripts.gerar_grids_estados import gerar_cinco_grids
+from src.gerador_grid import (
+    MIN_RESPOSTAS_CELULA,
     TAMANHO,
-    gerar_cinco_grids,
-    gerar_grid_aleatorio,
+    gerar_grid_soluvel,
     gerar_n_grids,
 )
-from src.categorias_grid import CATEGORIAS_GRID
-from src.estados_brasil import ufs_registradas
+from src.jogadores_grid import contar_intersecao, jogadores_grid
 
 
-class TestGridsHoopsStyle(unittest.TestCase):
-    def test_estrutura_times_nas_linhas_categorias_nas_colunas(self):
-        grid = gerar_grid_aleatorio(1, seed=42)
-        self.assertEqual(len(grid.times), TAMANHO)
-        self.assertEqual(len(grid.categorias), TAMANHO)
+class TestSolubilidadeGrid(unittest.TestCase):
+    def test_base_de_jogadores_carrega(self):
+        self.assertGreaterEqual(len(jogadores_grid()), 50)
 
-        ufs = [e.uf for e in grid.times]
-        self.assertEqual(len(ufs), len(set(ufs)))
-        self.assertTrue(set(ufs).issubset(ufs_registradas()))
-
-        ids = [c.id for c in grid.categorias]
+    def test_eixos_sorteiam_3_e_3_sem_repetir_criterio(self):
+        grid = gerar_grid_soluvel(1, seed=42, minimo=MIN_RESPOSTAS_CELULA)
+        self.assertEqual(len(grid.linhas), TAMANHO)
+        self.assertEqual(len(grid.colunas), TAMANHO)
+        ids = [c.id for c in (*grid.linhas, *grid.colunas)]
         self.assertEqual(len(ids), len(set(ids)))
-        self.assertTrue(set(ids).issubset({c.id for c in CATEGORIAS_GRID}))
 
-    def test_categorias_priorizam_tipos_distintos(self):
-        # Com seed fixa, deve haver pelo menos 2 tipos diferentes nas colunas.
-        grid = gerar_grid_aleatorio(1, seed=7)
-        tipos = {c.tipo for c in grid.categorias}
-        self.assertGreaterEqual(len(tipos), 2)
+    def test_todas_as_9_celulas_tem_minimo_de_respostas(self):
+        grid = gerar_grid_soluvel(1, seed=99, minimo=5)
+        for i, linha in enumerate(grid.linhas):
+            for j, coluna in enumerate(grid.colunas):
+                with self.subTest(linha=linha.id, coluna=coluna.id):
+                    n = contar_intersecao(linha, coluna)
+                    self.assertGreaterEqual(n, 5)
+                    self.assertEqual(grid.contagens[i][j], n)
 
-    def test_cinco_grids_reproduziveis_e_distintos(self):
-        a = gerar_n_grids(5, seed_base=20260811)
-        b = gerar_n_grids(5, seed_base=20260811)
+    def test_linhas_podem_nao_ser_somente_times(self):
+        # Em varios seeds, deve aparecer pelo menos um grid com categoria na linha.
+        viu_categoria_na_linha = False
+        for seed in range(100, 160):
+            grid = gerar_grid_soluvel(1, seed=seed, minimo=3)
+            if any(c.tipo != "time" for c in grid.linhas):
+                viu_categoria_na_linha = True
+                break
+        self.assertTrue(
+            viu_categoria_na_linha,
+            "Esperava criterios nao-time tambem nas linhas (pool unico).",
+        )
+
+    def test_cinco_grids_reproduziveis(self):
+        a = gerar_n_grids(5, seed_base=20260811, minimo=3)
+        b = gerar_n_grids(5, seed_base=20260811, minimo=3)
         chaves_a = [
-            tuple(e.uf for e in g.times) + tuple(c.id for c in g.categorias) for g in a
+            tuple(c.id for c in g.linhas) + tuple(c.id for c in g.colunas) for g in a
         ]
         chaves_b = [
-            tuple(e.uf for e in g.times) + tuple(c.id for c in g.categorias) for g in b
+            tuple(c.id for c in g.linhas) + tuple(c.id for c in g.colunas) for g in b
         ]
         self.assertEqual(chaves_a, chaves_b)
         self.assertEqual(len(set(chaves_a)), 5)
