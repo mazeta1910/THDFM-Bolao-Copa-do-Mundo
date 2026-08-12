@@ -7,6 +7,7 @@ import warnings
 from pathlib import Path
 
 from src.bandeiras import TIMES_ISO
+from src.estados_brasil import eh_codigo_estado, mapa_times_estados_iso
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FLAG_DIR = BASE_DIR / "data" / "flags"
@@ -25,6 +26,8 @@ _aviso_ssl_emitido = False
 def codigos_bandeira_necessarios() -> set[str]:
     codigos = set(TIMES_ISO.values())
     codigos.add("SCO")
+    # Bandeiras de estados sao geradas localmente (nao vao ao flagcdn).
+    codigos.update(mapa_times_estados_iso().values())
     return codigos
 
 
@@ -35,6 +38,23 @@ def codigo_flagcdn(iso: str) -> str:
 
 def caminho_bandeira(iso: str) -> Path:
     return FLAG_DIR / f"{iso.upper()}.png"
+
+
+def _gerar_bandeira_estado(iso: str, destino: Path) -> Path:
+    """Gera um distintivo BR-UF local (flagcdn nao tem bandeiras estaduais)."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    from src.estados_brasil import uf_do_codigo
+
+    uf = uf_do_codigo(iso) or iso[-2:]
+    imagem = Image.new("RGBA", (80, 56), (0, 156, 59, 255))
+    draw = ImageDraw.Draw(imagem)
+    draw.rectangle((0, 0, 79, 55), outline=(255, 205, 0), width=3)
+    fonte = ImageFont.load_default()
+    draw.text((40, 28), uf, font=fonte, fill=(255, 255, 255, 255), anchor="mm")
+    FLAG_DIR.mkdir(parents=True, exist_ok=True)
+    imagem.save(destino)
+    return destino
 
 
 def _contextos_ssl() -> list[ssl.SSLContext]:
@@ -80,6 +100,9 @@ def baixar_bandeira(iso: str, *, forcar: bool = False) -> Path:
     destino = caminho_bandeira(codigo)
     if destino.exists() and not forcar:
         return destino
+
+    if eh_codigo_estado(codigo):
+        return _gerar_bandeira_estado(codigo, destino)
 
     FLAG_DIR.mkdir(parents=True, exist_ok=True)
     slug = codigo_flagcdn(codigo)
